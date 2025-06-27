@@ -88,7 +88,9 @@ python reconhecer_letras.py
 - É recomendado coletar múltiplas amostras de cada letra e variar ângulos e posições.
 - Atualmente, o sistema reconhece **apenas uma mão por vez**.
 
-👨‍💻 Autor
-Desenvolvido por Elaíne Gomes e Joyce Peres
+👨‍💻 Autores
+Este projeto foi desenvolvido por:
+[Elaíne Gomes]
+[Joyce Peres]
 (🧠 Este projeto contou com o apoio de inteligência artificial generativa para otimizar a escrita de código e estruturação do projeto)
 
