@@ -34,7 +34,7 @@ modelo_letras_libras.pkl       # (Gerado após o treinamento)
 ```
 ## 🚀 Como Executar
 
-### ✅ Pré-requisitos
+### Pré-requisitos
 
 Instale os pacotes necessários:
 
