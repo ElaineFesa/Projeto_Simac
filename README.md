@@ -90,7 +90,8 @@ python reconhecer_letras.py
 
 👨‍💻 Autores
 Este projeto foi desenvolvido por:
-[Elaíne Gomes]
-[Joyce Peres]
+- Elaíne Gomes
+- Joyce Peres
+-
 (🧠 Este projeto contou com o apoio de inteligência artificial generativa para otimizar a escrita de código e estruturação do projeto)
 
