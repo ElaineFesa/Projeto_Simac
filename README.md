@@ -1,5 +1,5 @@
 # Projeto_Simac
-# 🤟 Reconhecimento de Letras em Libras com Python e MediaPipe
+# 🤟 Reconhecimento de Letras em Libras com Python
 
 Este projeto utiliza visão computacional e aprendizado de máquina para **reconhecer letras do alfabeto em Libras (Língua Brasileira de Sinais)**, utilizando **MediaPipe** para rastreamento de mão e **Random Forest** para classificação dos sinais.
 
@@ -9,59 +9,86 @@ Este projeto utiliza visão computacional e aprendizado de máquina para **recon
 
 ## 📸 Demonstração
 
-| Coleta de dados | Reconhecimento |
-|-----------------|----------------|
-| ![coleta](https://imgur.com/Xexemplo1.gif) | ![reconhecimento](https://imgur.com/Xexemplo2.gif) |
+O sistema é dividido em três etapas principais:
+
+1. **Coleta de Dados** (`coletar_letras.py`)  
+   Captura os gestos da mão e associa à letra pressionada no teclado, gerando um dataset.
+
+2. **Treinamento do Modelo** (`treinar_modelo.py`)  
+   Treina um classificador Random Forest com os dados coletados e salva o modelo.
+
+3. **Reconhecimento em Tempo Real** (`reconhecer_letras.py`)  
+   Usa o modelo treinado para prever, em tempo real, qual letra está sendo mostrada com a mão.
 
 ---
 
-## 📦 Tecnologias Utilizadas
+## 📂 Estrutura dos Arquivos
 
-- [Python 3.11+](https://www.python.org/)
-- [MediaPipe](https://google.github.io/mediapipe/)
-- [OpenCV](https://opencv.org/)
-- [Scikit-learn](https://scikit-learn.org/)
-- [Joblib](https://joblib.readthedocs.io/)
-
----
-
-## 🚀 Como Executar o Projeto
-
-### 1. Clone o repositório:
-```bash
-git clone https://github.com/lalaDevil/Projeto_Simac.git
-cd Projeto_Simac
 ```
-### 2. Instale as dependências:
-- pip install opencv-python mediapipe scikit-learn pandas joblib
-- pip install opencv-python
-- pip install mediapipe opencv-python
+📁 dados/
+  └── letras_libras.csv         # Arquivo CSV com os dados coletados
+coletar_letras.py              # Script para coletar os dados
+treinar_modelo.py              # Script para treinar o modelo
+reconhecer_letras.py           # Script para reconhecer as letras em tempo real
+modelo_letras_libras.pkl       # (Gerado após o treinamento)
+```
+## 🚀 Como Executar
 
-🧪 Etapas do Projeto
-1. Coletar dados
-Use a webcam para capturar posições da mão e rotular com a tecla da letra correspondente (A–Z):
-python app/coletar_letras.py
+### ✅ Pré-requisitos
 
-2. Treinar o modelo
-Com os dados salvos, treine o modelo de reconhecimento com:
-python app/treinar_modelo.py
+Instale os pacotes necessários:
 
-3. Reconhecer letras em tempo real
-Execute a detecção e predição com o modelo treinado:
-python app/reconhecer_letras.py
+```bash
+pip install opencv-python mediapipe scikit-learn pandas joblib
+```
 
-📁 Estrutura do Projeto
-libras_alfabeto/
-├── dados/                     ← Dados coletados (.csv)
-├── app/
-│   ├── coletar_letras.py      ← Coleta das posições da mão
-│   ├── treinar_modelo.py      ← Treinamento do modelo
-│   └── reconhecer_letras.py   ← Execução do reconhecimento
-├── modelo_letras_libras.pkl   ← Modelo treinado (gerado)
-├── requirements.txt           ← Dependências
-└── README.md
+### 1. Coletar dados com webcam
+
+```bash
+python coletar_letras.py
+```
+
+- Mostre uma letra em Libras com a mão para a câmera.
+- Pressione a tecla correspondente no teclado (ex: `A`, `B`, `C`...).
+- Repita para várias letras e exemplos.
+- Pressione `ESC` para sair.
+
+### 2. Treinar o modelo
+
+```bash
+python treinar_modelo.py
+```
+
+- O modelo será treinado e salvo como `modelo_letras_libras.pkl`.
+
+### 3. Reconhecer letras em tempo real
+
+```bash
+python reconhecer_letras.py
+```
+
+- A webcam será ativada e o sistema exibirá a letra reconhecida na tela.
+- Pressione `ESC` para sair.
+
+## 🎯 Resultados Esperados
+
+- A acurácia será exibida após o treinamento.
+- Durante o reconhecimento, a letra detectada será mostrada em tempo real sobre o vídeo.
+
+## 🛠️ Tecnologias Utilizadas
+
+- [OpenCV](https://opencv.org/)
+- [MediaPipe Hands](https://google.github.io/mediapipe/)
+- [Scikit-Learn](https://scikit-learn.org/)
+- [Python 3](https://www.python.org/)
+
+## 📌 Observações
+
+- O modelo depende da qualidade dos dados coletados.
+- É recomendado coletar múltiplas amostras de cada letra e variar ângulos e posições.
+- Atualmente, o sistema reconhece **apenas uma mão por vez**.
 
 👨‍💻 Autor
 Desenvolvido por Elaíne Gomes e Joyce Peres
-
+(🧠 Este projeto contou com o apoio de inteligência artificial generativa para otimizar a escrita de código e estruturação do projeto)
 
