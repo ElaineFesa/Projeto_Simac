@@ -1,109 +1,82 @@
 import cv2
-import mediapipe as mp
 import numpy as np
 from tensorflow.keras.models import load_model
 import joblib
 from collections import deque
-import time
+import mediapipe as mp
+from pathlib import Path
 
 # Configurações
+MODEL_PATH = Path('modelos/modelo_gestos.h5')
+LABEL_PATH = Path('modelos/rotulador_gestos.pkl')
 SEQUENCE_LENGTH = 30
-MIN_CONFIDENCE = 0.85  # Confiança mínima para considerar reconhecimento
-HISTORY_SIZE = 5       # Tamanho do histórico para suavização
+MIN_CONFIDENCE = 0.7
 
-# Carrega modelo e codificador
-model = load_model("modelo_gestos_libras.h5")
-le = joblib.load("rotulador_gestos.pkl")
+# Verificação inicial
+if not MODEL_PATH.exists() or not LABEL_PATH.exists():
+    print("❌ Modelo não encontrado!")
+    print("Execute primeiro o treinamento:")
+    print("> python treinar_gestos.py")
+    exit()
 
-# Inicializa MediaPipe
+# Inicialização
+model = load_model(MODEL_PATH)
+le = joblib.load(LABEL_PATH)
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(
     static_image_mode=False,
     max_num_hands=2,
-    min_detection_confidence=0.9,
-    min_tracking_confidence=0.9
+    min_detection_confidence=0.7,
+    min_tracking_confidence=0.5
 )
 mp_drawing = mp.solutions.drawing_utils
 
-# Inicializa câmera
-cap = cv2.VideoCapture(0)
-if not cap.isOpened():
-    print("Erro: Não foi possível acessar a câmera.")
-    exit()
-
-# Variáveis para reconhecimento
 buffer = deque(maxlen=SEQUENCE_LENGTH)
-historico = deque(maxlen=HISTORY_SIZE)
-ultimo_gesto = None
-ultimo_tempo = 0
-
-def normalizar_vetor(landmarks):
-    vetor = np.array([[lm.x, lm.y, lm.z] for lm in landmarks])
-    return vetor - vetor[0]
+cap = cv2.VideoCapture(0)
 
 print("\n=== RECONHECIMENTO DE GESTOS ===")
-print("Mostre o gesto com uma ou duas mãos")
+print(f"Gestos carregados: {', '.join(le.classes_)}")
 print("Pressione ESC para sair\n")
 
-while True:
+while cap.isOpened():
     ret, frame = cap.read()
     if not ret:
-        break
+        continue
 
     frame = cv2.flip(frame, 1)
-    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    results = hands.process(rgb_frame)
-    
-    # Processa detecção de mãos
+    results = hands.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+
     if results.multi_hand_landmarks:
-        vetor_maos = []
-        for hand_landmarks in results.multi_hand_landmarks:
-            mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-            vetor_maos.append(normalizar_vetor(hand_landmarks.landmark).flatten())
+        # Processa landmarks (2 mãos)
+        landmarks = []
+        for hand in results.multi_hand_landmarks:
+            mp_drawing.draw_landmarks(
+                frame, hand, mp_hands.HAND_CONNECTIONS,
+                mp_drawing.DrawingSpec(color=(121, 22, 76), thickness=2, circle_radius=2),
+                mp_drawing.DrawingSpec(color=(121, 44, 250), thickness=2, circle_radius=2)
+            )
+            landmarks.extend([[lm.x, lm.y, lm.z] for lm in hand.landmark])
         
-        # Preenche com zeros se apenas uma mão for detectada
-        if len(vetor_maos) == 1:
-            vetor_completo = np.concatenate([vetor_maos[0], np.zeros(63)])
-        else:
-            vetor_completo = np.concatenate(vetor_maos[:2])
+        # Padronização
+        landmarks = landmarks[:42]  # Máximo 2 mãos
+        if len(landmarks) < 42:
+            landmarks.extend([[0,0,0]] * (42 - len(landmarks)))
         
-        buffer.append(vetor_completo)
-        
-        # Quando temos uma sequência completa
+        buffer.append(np.array(landmarks).flatten())
+
+        # Reconhecimento quando buffer cheio
         if len(buffer) == SEQUENCE_LENGTH:
-            entrada = np.expand_dims(np.array(buffer), axis=0)
+            entrada = np.array(buffer).reshape(1, SEQUENCE_LENGTH, 126)
             preds = model.predict(entrada, verbose=0)[0]
             classe_idx = np.argmax(preds)
             confianca = preds[classe_idx]
-            
+
             if confianca >= MIN_CONFIDENCE:
-                gesto_atual = le.classes_[classe_idx]
-                historico.append(gesto_atual)
-                
-                # Suavização por voto majoritário
-                contagem = {}
-                for g in historico:
-                    contagem[g] = contagem.get(g, 0) + 1
-                gesto_final = max(contagem.items(), key=lambda x: x[1])[0]
-                
-                # Evita repetições rápidas
-                if gesto_final != ultimo_gesto or (time.time() - ultimo_tempo) > 1:
-                    print(f"Gesto reconhecido: {gesto_final} ({confianca:.2%})")
-                    ultimo_gesto = gesto_final
-                    ultimo_tempo = time.time()
-                
-                # Exibe na tela
-                cv2.putText(frame, f"{gesto_final} ({confianca:.0%})", 
-                           (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-    
-    else:
-        buffer.clear()
-    
-    # Exibe informações
-    cv2.putText(frame, f"Buffer: {len(buffer)}/{SEQUENCE_LENGTH}", 
-               (20, frame.shape[0] - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 1)
-    
-    cv2.imshow("Reconhecimento de Gestos", frame)
+                gesto = le.classes_[classe_idx]
+                cv2.putText(frame, f"{gesto} ({confianca:.0%})", 
+                           (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+    cv2.imshow("Reconhecimento", frame)
     if cv2.waitKey(1) == 27:
         break
 
