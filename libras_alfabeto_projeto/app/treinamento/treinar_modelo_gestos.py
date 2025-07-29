@@ -13,7 +13,7 @@ CSV_PATH = Path('dados/gestos_libras.csv')
 MODEL_DIR = Path('modelos')
 MODEL_DIR.mkdir(exist_ok=True)
 SEQUENCE_LENGTH = 30
-MIN_AMOSTRAS = 5
+MIN_AMOSTRAS = 15
 
 def carregar_dados():
     """Carrega e valida os dados garantindo shape consistente"""
