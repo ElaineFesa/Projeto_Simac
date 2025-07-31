@@ -15,8 +15,9 @@ LEGEND_FILE = OUTPUT_DIR / 'legenda.txt'
 OUTPUT_VIDEO = OUTPUT_DIR / 'video_com_legenda.mp4'
 MODEL_PATH = Path('modelos/modelo_gestos.h5')
 LABEL_PATH = Path('modelos/rotulador_gestos.pkl')
-SEQUENCE_LENGTH = 15  # <-- Reduzido para melhorar reconhecimento
+SEQUENCE_LENGTH = 15
 MIN_CONFIDENCE = 0.5
+
 
 # === CARREGAMENTO DE MODELOS ===
 model = load_model(MODEL_PATH)
@@ -58,7 +59,6 @@ out = cv2.VideoWriter(str(OUTPUT_VIDEO), fourcc, fps, (largura, altura))
 buffer = deque(maxlen=SEQUENCE_LENGTH)
 legendas = []
 frame_idx = 0
-ultima_classe = None
 gestos_detectados = 0
 
 print("📹 Processando vídeo...")
@@ -89,26 +89,23 @@ while True:
 
         buffer.append(np.array(landmarks).flatten())
 
-        if len(buffer) == SEQUENCE_LENGTH:
+        if len(buffer) == SEQUENCE_LENGTH and gestos_detectados == 0:
             print(f"[Reconhecimento] Buffer completo no frame {frame_idx}")
             classe, confianca = reconhecer_gesto(buffer)
             timestamp = str(timedelta(seconds=frame_idx / fps))
 
-            if classe and classe != ultima_classe:
+            if classe:
                 legenda = f"[{timestamp}] {classe} ({confianca:.0%})"
                 legendas.append(legenda)
-                ultima_classe = classe
                 gestos_detectados += 1
 
-            if classe:
                 cv2.putText(frame, f'{classe} ({confianca:.0%})', (10, 40),
                             cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 0), 2)
             else:
                 cv2.putText(frame, "Reconhecendo...", (10, 40),
                             cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 200, 255), 2)
     else:
-        ultima_classe = None
-        cv2.putText(frame, "Mão não detectada", (10, 40),
+        cv2.putText(frame, "Mao nao detectada", (10, 40),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
 
     out.write(frame)
