@@ -1,74 +1,140 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import ttk, messagebox
 import cv2
+import mediapipe as mp
 from PIL import Image, ImageTk
 import threading
-import os
+import random
+import numpy as np
 from pathlib import Path
+import joblib
+from tensorflow.keras.models import load_model
+from collections import deque
+import subprocess
 import sys
+import os
 
 class AplicativoLibras:
     def __init__(self, root):
         self.root = root
-        self.root.title("Aprenda Libras - Níveis Educacionais")
+        self.root.title("Aprenda Libras - Sistema Educacional")
         self.root.geometry("1200x800")
-        self.root.configure(bg='#f0f8ff')
         
-        # Variáveis de estado
+        # Configuração de caminhos baseado na sua estrutura
+        self.base_dir = Path(__file__).parent.parent
+        self.dados_dir = self.base_dir / "dados"
+        self.modelos_dir = self.base_dir / "modelos"
+        self.coleta_dir = self.base_dir / "app" / "coleta"
+        self.reconhecer_dir = self.base_dir / "app" / "reconhecer"
+        self.treinamento_dir = self.base_dir / "app" / "treinamento"
+        self.utilitarios_dir = self.base_dir / "utilitarios"
+        self.saida_dir = self.base_dir / "saída"
+
+        # Configurações do MediaPipe
+        self.mp_hands = mp.solutions.hands
+        self.hands = self.mp_hands.Hands(
+            static_image_mode=False,
+            max_num_hands=2,
+            min_detection_confidence=0.7,
+            min_tracking_confidence=0.5
+        )
+        self.mp_drawing = mp.solutions.drawing_utils
+        self.mp_drawing_styles = mp.solutions.drawing_styles
+
+        # Estado do aplicativo
         self.cap = None
-        self.video_thread = None
         self.running = False
         self.nivel_atual = 1
         self.pontuacao = 0
-        self.desafio_ativo = False
         self.gesto_alvo = None
+        self.buffer_gestos = deque(maxlen=30)
+        self.historico_predicoes = deque(maxlen=15)
         
-        # Configurações de caminhos
-        self.dados_dir = Path('dados')
-        self.modelos_dir = Path('modelos')
-        self.dados_dir.mkdir(exist_ok=True)
-        self.modelos_dir.mkdir(exist_ok=True)
-        
-        # Carregar modelos (simulado - na prática você carregaria seus modelos reais)
-        self.modelo_letras = None
+        # Carregar modelos
         self.modelo_gestos = None
+        self.le_gestos = None
+        self.modelo_letras = None
         self.carregar_modelos()
-        
+
+        # Gestos por nível (ajuste conforme seus modelos)
+        self.gestos_por_nivel = {
+            1: ["A", "B", "C", "D", "E"],  # Alfabeto
+            2: ["OLÁ", "OBRIGADO", "AJUDA"],  # Cumprimentos
+            3: ["ABAIXO", "ACIMA", "ADENTRO"],  # Seus gestos
+            4: ["FAMÍLIA", "AMIGO", "ESCOLA"],  # Vocabulário
+            5: ["EU TE AMO", "COMO VOCÊ ESTÁ"]  # Frases
+        }
+
         # Interface
         self.criar_menu()
         self.criar_barra_status()
         self.criar_area_principal()
         self.criar_painel_controle()
-        
+
     def carregar_modelos(self):
-        """Simula o carregamento dos modelos (substitua com sua implementação real)"""
-        modelos = {
-            'letras': self.modelos_dir / 'modelo_letras_libras.pkl',
-            'gestos': self.modelos_dir / 'modelo_gestos.h5'
-        }
+        """Carrega os modelos de reconhecimento com verificação detalhada"""
+        try:
+            # Caminhos dos modelos
+            modelo_gestos_path = self.modelos_dir / "modelo_gestos.h5"
+            rotulador_path = self.modelos_dir / "rotulador_gestos.pkl"
         
-        for nome, caminho in modelos.items():
-            if caminho.exists():
-                print(f"Modelo {nome} carregado")
+            print(f"\nVerificando modelos em: {self.modelos_dir}")
+        
+            # Verificação detalhada
+            if not modelo_gestos_path.exists():
+                print(f"Arquivo não encontrado: {modelo_gestos_path}")
+            if not rotulador_path.exists():
+                print(f"Arquivo não encontrado: {rotulador_path}")
+        
+            if modelo_gestos_path.exists() and rotulador_path.exists():
+                print("Carregando modelo de gestos...")
+                self.modelo_gestos = load_model(modelo_gestos_path)
+                self.le_gestos = joblib.load(rotulador_path)
+                print(f"✅ Modelo de gestos carregado. Classes: {list(self.le_gestos.classes_)}")
             else:
-                print(f"Aviso: Modelo {nome} não encontrado em {caminho}")
-    
+                print("❌ Arquivos do modelo de gestos incompletos")
+        
+            # Modelo de letras (opcional)
+            modelo_letras_path = self.saida_dir / "modelo_letras_libras.pkl"
+            if modelo_letras_path.exists():
+                self.modelo_letras = joblib.load(modelo_letras_path)
+                print("✅ Modelo de letras carregado")
+            else:
+                print(f"❌ Arquivo não encontrado: {modelo_letras_path}")
+            
+        except Exception as e:
+            error_msg = f"Falha ao carregar modelos: {str(e)}"
+            print(error_msg)
+            messagebox.showerror("Erro", error_msg)
+
     def criar_menu(self):
         menubar = tk.Menu(self.root)
-        
-        # Menu Arquivo
-        menu_arquivo = tk.Menu(menubar, tearoff=0)
-        menu_arquivo.add_command(label="Sair", command=self.sair)
-        menubar.add_cascade(label="Arquivo", menu=menu_arquivo)
         
         # Menu Níveis
         menu_niveis = tk.Menu(menubar, tearoff=0)
         for i in range(1, 6):
             menu_niveis.add_command(
                 label=f"Nível {i}", 
-                command=lambda n=i: self.definir_nivel(n)
+                command=lambda n=i: self.iniciar_nivel(n)
             )
         menubar.add_cascade(label="Níveis", menu=menu_niveis)
+        
+        # Menu Coleta
+        menu_coleta = tk.Menu(menubar, tearoff=0)
+        menu_coleta.add_command(label="Coletar Gestos", command=self.executar_coletar_gestos)
+        menu_coleta.add_command(label="Coletar Letras", command=self.executar_coletar_letras)
+        menubar.add_cascade(label="Coleta", menu=menu_coleta)
+        
+        # Menu Treinamento
+        menu_treinamento = tk.Menu(menubar, tearoff=0)
+        menu_treinamento.add_command(label="Treinar Modelo Gestos", command=self.executar_treinar_gestos)
+        menu_treinamento.add_command(label="Treinar Modelo Letras", command=self.executar_treinar_letras)
+        menubar.add_cascade(label="Treinamento", menu=menu_treinamento)
+        
+        # Menu Utilitários
+        menu_util = tk.Menu(menubar, tearoff=0)
+        menu_util.add_command(label="Legendar Vídeo", command=self.executar_legendar_video)
+        menubar.add_cascade(label="Utilitários", menu=menu_util)
         
         # Menu Ajuda
         menu_ajuda = tk.Menu(menubar, tearoff=0)
@@ -76,10 +142,10 @@ class AplicativoLibras:
         menubar.add_cascade(label="Ajuda", menu=menu_ajuda)
         
         self.root.config(menu=menubar)
-    
+
     def criar_barra_status(self):
         self.status_var = tk.StringVar()
-        self.status_var.set("Pronto | Nível 1 | Pontuação: 0")
+        self.status_var.set(f"Pronto | Nível: {self.nivel_atual} | Pontos: {self.pontuacao}")
         
         status_bar = ttk.Label(
             self.root, 
@@ -88,144 +154,89 @@ class AplicativoLibras:
             anchor=tk.W
         )
         status_bar.pack(side=tk.BOTTOM, fill=tk.X)
-    
+
     def criar_area_principal(self):
         main_frame = ttk.Frame(self.root)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        # Painel de vídeo
-        self.video_frame = ttk.LabelFrame(main_frame, text="Visualização")
-        self.video_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+        # Painel do gesto alvo
+        left_frame = ttk.LabelFrame(main_frame, text="Gesto Alvo")
+        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
         
-        self.video_label = ttk.Label(self.video_frame)
+        self.gesto_alvo_label = ttk.Label(
+            left_frame,
+            text="Selecione um nível para começar",
+            font=('Helvetica', 24, 'bold'),
+            foreground='#2E86C1',
+            anchor=tk.CENTER
+        )
+        self.gesto_alvo_label.pack(expand=True, fill=tk.BOTH)
+        
+        # Painel de feedback
+        self.feedback_frame = ttk.LabelFrame(left_frame, text="Feedback")
+        self.feedback_frame.pack(fill=tk.X, pady=10)
+        
+        self.feedback_label = ttk.Label(
+            self.feedback_frame,
+            text="",
+            font=('Helvetica', 14),
+            anchor=tk.CENTER
+        )
+        self.feedback_label.pack(pady=10)
+        
+        # Painel da câmera
+        right_frame = ttk.LabelFrame(main_frame, text="Sua Câmera")
+        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        self.video_label = ttk.Label(right_frame)
         self.video_label.pack(fill=tk.BOTH, expand=True)
-        
-        # Painel de informações
-        info_frame = ttk.Frame(main_frame)
-        info_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5)
-        
-        # Nível atual
-        nivel_frame = ttk.LabelFrame(info_frame, text="Nível Atual")
-        nivel_frame.pack(fill=tk.X, pady=5)
-        
-        self.nivel_label = ttk.Label(
-            nivel_frame, 
-            text=f"Nível {self.nivel_atual}", 
-            font=('Helvetica', 14, 'bold')
-        )
-        self.nivel_label.pack(pady=10)
-        
-        # Progresso
-        progresso_frame = ttk.LabelFrame(info_frame, text="Progresso")
-        progresso_frame.pack(fill=tk.X, pady=5)
-        
-        self.progresso_var = tk.DoubleVar()
-        self.progresso_bar = ttk.Progressbar(
-            progresso_frame, 
-            variable=self.progresso_var,
-            maximum=100
-        )
-        self.progresso_bar.pack(fill=tk.X, padx=5, pady=5)
-        
-        self.pontuacao_label = ttk.Label(
-            progresso_frame, 
-            text=f"Pontuação: {self.pontuacao}",
-            font=('Helvetica', 12)
-        )
-        self.pontuacao_label.pack(pady=5)
-        
-        # Instruções
-        instrucoes_frame = ttk.LabelFrame(info_frame, text="Instruções")
-        instrucoes_frame.pack(fill=tk.BOTH, expand=True, pady=5)
-        
-        self.instrucoes_text = tk.Text(
-            instrucoes_frame, 
-            wrap=tk.WORD, 
-            height=10,
-            state=tk.DISABLED
-        )
-        scroll = ttk.Scrollbar(instrucoes_frame, command=self.instrucoes_text.yview)
-        self.instrucoes_text.config(yscrollcommand=scroll.set)
-        
-        scroll.pack(side=tk.RIGHT, fill=tk.Y)
-        self.instrucoes_text.pack(fill=tk.BOTH, expand=True)
-        
-        self.atualizar_instrucoes()
-    
+
     def criar_painel_controle(self):
-        controle_frame = ttk.Frame(self.root)
-        controle_frame.pack(fill=tk.X, padx=10, pady=5)
+        control_frame = ttk.Frame(self.root)
+        control_frame.pack(fill=tk.X, padx=10, pady=5)
         
-        # Botões de controle
         self.btn_camera = ttk.Button(
-            controle_frame, 
-            text="Iniciar Câmera", 
+            control_frame,
+            text="Iniciar Câmera",
             command=self.toggle_camera
         )
         self.btn_camera.pack(side=tk.LEFT, padx=5)
         
-        self.btn_desafio = ttk.Button(
-            controle_frame, 
-            text="Iniciar Desafio", 
-            command=self.iniciar_desafio,
+        self.btn_verificar = ttk.Button(
+            control_frame,
+            text="Verificar Gesto",
+            command=self.verificar_gesto,
             state=tk.DISABLED
         )
-        self.btn_desafio.pack(side=tk.LEFT, padx=5)
+        self.btn_verificar.pack(side=tk.LEFT, padx=5)
         
-        self.btn_reconhecer = ttk.Button(
-            controle_frame, 
-            text="Reconhecer Gestos", 
-            command=self.reconhecer_gestos,
+        self.btn_proximo = ttk.Button(
+            control_frame,
+            text="Próximo Nível",
+            command=self.proximo_nivel,
             state=tk.DISABLED
         )
-        self.btn_reconhecer.pack(side=tk.LEFT, padx=5)
-        
-        self.btn_coletar = ttk.Button(
-            controle_frame, 
-            text="Coletar Dados", 
-            command=self.coletar_dados
-        )
-        self.btn_coletar.pack(side=tk.LEFT, padx=5)
-        
-        self.btn_treinar = ttk.Button(
-            controle_frame, 
-            text="Treinar Modelo", 
-            command=self.treinar_modelo
-        )
-        self.btn_treinar.pack(side=tk.LEFT, padx=5)
-    
-    def atualizar_instrucoes(self):
-        """Atualiza as instruções com base no nível atual"""
-        instrucoes = {
-            1: "Nível 1: Alfabeto em Libras\n\nMostre as letras A, B e C com as mãos.\n\nDica: Comece com a letra A, formando um punho com a mão direita.",
-            2: "Nível 2: Palavras Básicas\n\nMostre os gestos para 'Olá', 'Obrigado' e 'Ajuda'.",
-            3: "Nível 3: Frases Simples\n\nCombine gestos para formar 'Meu nome é...'",
-            4: "Nível 4: Vocabulário Avançado\n\nMostre gestos para objetos comuns como 'casa', 'escola' e 'família'.",
-            5: "Nível 5: Conversação\n\nPratique diálogos curtos usando múltiplos gestos em sequência."
-        }
-        
-        texto = instrucoes.get(self.nivel_atual, "Nível não configurado")
-        self.instrucoes_text.config(state=tk.NORMAL)
-        self.instrucoes_text.delete(1.0, tk.END)
-        self.instrucoes_text.insert(tk.END, texto)
-        self.instrucoes_text.config(state=tk.DISABLED)
-    
-    def definir_nivel(self, nivel):
-        """Define o nível atual do aplicativo"""
+        self.btn_proximo.pack(side=tk.LEFT, padx=5)
+
+    def iniciar_nivel(self, nivel):
+        """Inicia um novo nível de aprendizado"""
         self.nivel_atual = nivel
-        self.nivel_label.config(text=f"Nível {self.nivel_atual}")
-        self.atualizar_instrucoes()
-        self.atualizar_status()
-    
+        self.gesto_alvo = random.choice(self.gestos_por_nivel[nivel])
+        self.gesto_alvo_label.config(text=self.gesto_alvo)
+        self.feedback_label.config(text="Mostre o gesto para a câmera", foreground='black')
+        self.btn_verificar.config(state=tk.NORMAL)
+        self.btn_proximo.config(state=tk.DISABLED)
+        self.atualizar_status(f"Nível {nivel} | Gesto: {self.gesto_alvo}")
+
     def toggle_camera(self):
         """Liga/desliga a câmera"""
         if self.cap is None:
             self.iniciar_camera()
         else:
             self.parar_camera()
-    
+
     def iniciar_camera(self):
-        """Inicia a captura de vídeo da câmera"""
+        """Inicia a captura de vídeo com detecção de landmarks"""
         self.cap = cv2.VideoCapture(0)
         if not self.cap.isOpened():
             messagebox.showerror("Erro", "Não foi possível acessar a câmera")
@@ -233,151 +244,218 @@ class AplicativoLibras:
         
         self.running = True
         self.btn_camera.config(text="Parar Câmera")
-        self.btn_desafio.config(state=tk.NORMAL)
-        self.btn_reconhecer.config(state=tk.NORMAL)
         
-        # Inicia thread para atualizar o vídeo
-        self.video_thread = threading.Thread(target=self.atualizar_video, daemon=True)
+        self.video_thread = threading.Thread(target=self.atualizar_video)
+        self.video_thread.daemon = True
         self.video_thread.start()
-    
+
+    def atualizar_video(self):
+        """Atualiza o frame da câmera com landmarks visíveis"""
+        while self.running:
+            ret, frame = self.cap.read()
+            if not ret:
+                continue
+            
+            frame = cv2.flip(frame, 1)
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            results = self.hands.process(frame_rgb)
+            
+            # Desenhar landmarks
+            if results.multi_hand_landmarks:
+                for hand_landmarks in results.multi_hand_landmarks:
+                    self.mp_drawing.draw_landmarks(
+                        frame,
+                        hand_landmarks,
+                        self.mp_hands.HAND_CONNECTIONS,
+                        self.mp_drawing_styles.get_default_hand_landmarks_style(),
+                        self.mp_drawing_styles.get_default_hand_connections_style()
+                    )
+                
+                # Processar landmarks para reconhecimento
+                self.processar_landmarks(results)
+            
+            # Converter para Tkinter
+            img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            img = ImageTk.PhotoImage(image=img)
+            
+            self.video_label.imgtk = img
+            self.video_label.config(image=img)
+            
+            self.root.update()
+
+    def processar_landmarks(self, results):
+        """Processa os landmarks para reconhecimento"""
+        landmarks = []
+        if results.multi_hand_landmarks:
+            for hand in results.multi_hand_landmarks:
+                landmarks.extend([[lm.x, lm.y, lm.z] for lm in hand.landmark])
+        
+        # Padroniza para 2 mãos (42 landmarks)
+        landmarks = landmarks[:42]
+        if len(landmarks) < 42:
+            landmarks.extend([[0,0,0]] * (42 - len(landmarks)))
+        
+        self.buffer_gestos.append(np.array(landmarks).flatten())
+
+    def verificar_gesto(self):
+        """Verifica se o gesto corresponde ao alvo"""
+        if not self.modelo_gestos or not self.le_gestos:
+            messagebox.showerror("Erro", "Modelo de gestos não carregado!")
+            return
+        
+        if len(self.buffer_gestos) < 30:
+            self.feedback_label.config(
+                text="Continue mostrando o gesto...",
+                foreground='orange'
+            )
+            return
+        
+        try:
+            entrada = np.array(self.buffer_gestos).reshape(1, 30, 126)
+            preds = self.modelo_gestos.predict(entrada, verbose=0)[0]
+            classe_idx = np.argmax(preds)
+            confianca = preds[classe_idx]
+            gesto_reconhecido = self.le_gestos.classes_[classe_idx]
+            
+            # Suavização com histórico
+            self.historico_predicoes.append(gesto_reconhecido)
+            contagem = {}
+            for g in self.historico_predicoes:
+                contagem[g] = contagem.get(g, 0) + 1
+            gesto_final = max(contagem.items(), key=lambda x: x[1])[0]
+            
+            if confianca > 0.7:
+                if gesto_final == self.gesto_alvo:
+                    self.pontuacao += 10 * self.nivel_atual
+                    self.feedback_label.config(
+                        text=f"✅ Correto! {gesto_final} ({confianca:.0%})",
+                        foreground='green'
+                    )
+                    self.btn_proximo.config(state=tk.NORMAL)
+                else:
+                    self.feedback_label.config(
+                        text=f"❌ Tente novamente. Reconhecido: {gesto_final}",
+                        foreground='red'
+                    )
+            else:
+                self.feedback_label.config(
+                    text="Gesto não reconhecido claramente",
+                    foreground='orange'
+                )
+            
+            self.atualizar_status()
+            
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao reconhecer gesto: {str(e)}")
+
+    def proximo_nivel(self):
+        """Avança para o próximo nível"""
+        if self.nivel_atual < 5:
+            self.nivel_atual += 1
+            self.buffer_gestos.clear()
+            self.historico_predicoes.clear()
+            self.iniciar_nivel(self.nivel_atual)
+        else:
+            messagebox.showinfo(
+                "Parabéns!",
+                f"Você completou todos os níveis!\nPontuação final: {self.pontuacao}"
+            )
+            self.btn_proximo.config(state=tk.DISABLED)
+
+    def executar_coletar_gestos(self):
+        """Executa o coletor de gestos"""
+        self.parar_camera()
+        try:
+            script_path = self.coleta_dir / "coletar_gestos.py"
+            subprocess.Popen([sys.executable, str(script_path)])
+            messagebox.showinfo("Aviso", "Coletor de gestos iniciado em outra janela")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao executar coletar_gestos.py: {str(e)}")
+
+    def executar_coletar_letras(self):
+        """Executa o coletor de letras"""
+        self.parar_camera()
+        try:
+            script_path = self.coleta_dir / "coletar_letras.py"
+            subprocess.Popen([sys.executable, str(script_path)])
+            messagebox.showinfo("Aviso", "Coletor de letras iniciado em outra janela")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao executar coletar_letras.py: {str(e)}")
+
+    def executar_treinar_gestos(self):
+        """Executa o treinamento de gestos"""
+        self.parar_camera()
+        try:
+            script_path = self.treinamento_dir / "treinar_modelo_gestos.py"
+            subprocess.Popen([sys.executable, str(script_path)])
+            messagebox.showinfo("Aviso", "Treinamento de gestos iniciado")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao executar treinar_modelo_gestos.py: {str(e)}")
+
+    def executar_treinar_letras(self):
+        """Executa o treinamento de letras"""
+        self.parar_camera()
+        try:
+            script_path = self.treinamento_dir / "treinar_modelo.py"
+            subprocess.Popen([sys.executable, str(script_path)])
+            messagebox.showinfo("Aviso", "Treinamento de letras iniciado")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao executar treinar_modelo.py: {str(e)}")
+
+    def executar_legendar_video(self):
+        """Executa o gerador de legendas"""
+        self.parar_camera()
+        try:
+            script_path = self.utilitarios_dir / "gerar_legenda_video.py"
+            subprocess.Popen([sys.executable, str(script_path)])
+            messagebox.showinfo("Aviso", "Gerador de legendas iniciado")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao executar gerar_legenda_video.py: {str(e)}")
+
     def parar_camera(self):
         """Para a captura de vídeo"""
         self.running = False
-        if self.video_thread and self.video_thread.is_alive():
-            self.video_thread.join(timeout=1)
-        
         if self.cap:
             self.cap.release()
             self.cap = None
-        
-        # Limpa o frame de vídeo
-        self.video_label.config(image='')
         self.btn_camera.config(text="Iniciar Câmera")
-        self.btn_desafio.config(state=tk.DISABLED)
-        self.btn_reconhecer.config(state=tk.DISABLED)
-    
-    def atualizar_video(self):
-        """Atualiza o frame de vídeo em tempo real"""
-        while self.running and self.cap:
-            ret, frame = self.cap.read()
-            if ret:
-                # Processamento básico do frame (pode ser expandido)
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                frame = cv2.flip(frame, 1)
-                
-                # Redimensiona para caber no painel
-                img = Image.fromarray(frame)
-                img.thumbnail((800, 600))
-                imgtk = ImageTk.PhotoImage(image=img)
-                
-                # Atualiza a imagem no label
-                self.video_label.imgtk = imgtk
-                self.video_label.config(image=imgtk)
-            
-            # Taxa de atualização (~30fps)
-            self.root.update_idletasks()
-    
-    def iniciar_desafio(self):
-        """Inicia um desafio do nível atual"""
-        if self.desafio_ativo:
-            self.parar_desafio()
-            return
-        
-        # Define o gesto alvo com base no nível
-        desafios = {
-            1: ["A", "B", "C"],
-            2: ["OLÁ", "OBRIGADO", "AJUDA"],
-            3: ["MEU", "NOME", "É"],
-            4: ["CASA", "ESCOLA", "FAMÍLIA"],
-            5: ["OI", "COMO", "VOCÊ", "ESTÁ"]
-        }
-        
-        self.gesto_alvo = desafios.get(self.nivel_atual, ["A"])[0]
-        self.desafio_ativo = True
-        self.btn_desafio.config(text="Parar Desafio")
-        
-        # Mostra instrução do desafio
-        self.instrucoes_text.config(state=tk.NORMAL)
-        self.instrucoes_text.delete(1.0, tk.END)
-        self.instrucoes_text.insert(tk.END, f"Desafio: Mostre o gesto para '{self.gesto_alvo}'")
-        self.instrucoes_text.config(state=tk.DISABLED)
-        
-        # Aqui você implementaria a lógica de reconhecimento específica para o desafio
-        messagebox.showinfo("Desafio Iniciado", f"Mostre o gesto para: {self.gesto_alvo}")
-    
-    def parar_desafio(self):
-        """Para o desafio atual"""
-        self.desafio_ativo = False
-        self.gesto_alvo = None
-        self.btn_desafio.config(text="Iniciar Desafio")
-        self.atualizar_instrucoes()
-    
-    def reconhecer_gestos(self):
-        """Inicia o reconhecimento contínuo de gestos"""
-        # Implementação simplificada - na prática você chamaria seu módulo de reconhecimento
-        messagebox.showinfo("Reconhecimento", "Reconhecimento de gestos ativado. Mostre um gesto para a câmera.")
-    
-    def coletar_dados(self):
-        """Abre a janela para coleta de dados de gestos"""
-        # Implementação simplificada - na prática você chamaria seu módulo de coleta
-        escolha = messagebox.askquestion("Coletar Dados", "Deseja coletar dados de letras ou gestos?")
-        
-        if escolha == 'yes':
-            messagebox.showinfo("Coletar Letras", "Modo de coleta de letras ativado. Pressione a tecla correspondente à letra mostrada.")
-        else:
-            messagebox.showinfo("Coletar Gestos", "Modo de coleta de gestos ativado. Digite o nome do gesto e mostre-o para a câmera.")
-    
-    def treinar_modelo(self):
-        """Inicia o treinamento do modelo"""
-        # Implementação simplificada - na prática você chamaria seu módulo de treinamento
-        resposta = messagebox.askyesno("Treinar Modelo", "Isso pode levar alguns minutos. Deseja continuar?")
-        
-        if resposta:
-            # Simula o treinamento
-            self.progresso_var.set(0)
-            self.atualizar_status("Treinando modelo...")
-            
-            def simular_treinamento():
-                for i in range(1, 101):
-                    self.progresso_var.set(i)
-                    self.root.update_idletasks()
-                    self.root.after(50)
-                
-                self.atualizar_status("Modelo treinado com sucesso!")
-                messagebox.showinfo("Sucesso", "Modelo treinado com sucesso!")
-            
-            threading.Thread(target=simular_treinamento, daemon=True).start()
-    
+        self.btn_verificar.config(state=tk.DISABLED)
+        self.video_label.config(image='')
+
     def atualizar_status(self, mensagem=None):
         """Atualiza a barra de status"""
         if mensagem:
             self.status_var.set(mensagem)
         else:
-            self.status_var.set(f"Pronto | Nível {self.nivel_atual} | Pontuação: {self.pontuacao}")
-    
+            self.status_var.set(f"Nível {self.nivel_atual} | Pontos: {self.pontuacao} | Gesto: {self.gesto_alvo}")
+
     def mostrar_sobre(self):
-        """Mostra a janela 'Sobre'"""
+        """Mostra informações sobre o aplicativo"""
         sobre = """
-        Aprenda Libras - Níveis Educacionais
+        Aprenda Libras - Sistema Educacional
         
-        Versão 1.0
-        Desenvolvido para auxiliar no aprendizado de Língua Brasileira de Sinais (Libras).
+        Versão 2.0
+        Sistema completo para aprendizado de Libras
         
-        Recursos:
-        - Níveis progressivos de aprendizado
-        - Reconhecimento de gestos em tempo real
-        - Desafios interativos
-        - Ferramentas para coleta e treinamento
+        Estrutura do Projeto:
+        - PROJETO_SIMAC/
+          ├── app/
+          │   ├── coleta/ (coletores de dados)
+          │   ├── reconhecer/ (módulos de reconhecimento)
+          │   ├── treinamento/ (scripts de treinamento)
+          │   └── telas/ (interface principal)
+          ├── dados/ (arquivos CSV)
+          ├── modelos/ (modelos treinados)
+          └── utilitarios/ (ferramentas adicionais)
         
-        © 2023 Projeto Educacional
+        © 2023 Projeto de Acessibilidade
         """
         messagebox.showinfo("Sobre", sobre)
-    
+
     def sair(self):
-        """Encerra o aplicativo"""
-        if messagebox.askokcancel("Sair", "Deseja realmente sair do aplicativo?"):
-            self.parar_camera()
-            self.root.destroy()
+        """Encerra o aplicativo corretamente"""
+        self.parar_camera()
+        self.root.destroy()
 
 if __name__ == "__main__":
     root = tk.Tk()
