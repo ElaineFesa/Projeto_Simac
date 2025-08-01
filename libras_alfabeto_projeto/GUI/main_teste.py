@@ -16,9 +16,23 @@ import subprocess
 
 class AplicativoLibras:
     def __init__(self, root):
+        # Configuração do tema
+        self.COR_PRIMARIA = "#6A0DAD"  # Roxo principal
+        self.COR_SECUNDARIA = "#FFD700"  # Amarelo ouro
+        self.COR_TERCIARIA = "#4B0082"  # Roxo escuro
+        self.COR_TEXTO_CLARO = "#FFFFFF"  # Branco
+        self.COR_TEXTO_ESCURO = "#333333"  # Cinza escuro
+        self.COR_FUNDO = "#F5F5F5"  # Cinza claro
+        self.COR_SUCESSO = "#2E8B57"  # Verde
+        self.COR_ERRO = "#DC143C"  # Vermelho
+
         self.root = root
         self.root.title("Aprenda Libras - Sistema Completo")
         self.root.geometry("1200x800")
+        self.root.configure(bg=self.COR_FUNDO)
+        
+        # Configuração de estilos
+        self.configurar_estilos()
         
         # Configuração de caminhos
         self.base_dir = Path(__file__).parent.parent.parent
@@ -74,6 +88,49 @@ class AplicativoLibras:
         self.criar_area_principal()
         self.criar_painel_controle()
 
+    def configurar_estilos(self):
+        """Configura todos os estilos visuais"""
+        style = ttk.Style()
+        style.theme_use('clam')
+        
+        # Frame principal
+        style.configure('TFrame', background=self.COR_FUNDO)
+        
+        # Labels
+        style.configure('TLabel', 
+                      background=self.COR_FUNDO,
+                      foreground=self.COR_TEXTO_ESCURO,
+                      font=('Helvetica', 10))
+        
+        # Botões
+        style.configure('TButton',
+                      background=self.COR_PRIMARIA,
+                      foreground=self.COR_TEXTO_CLARO,
+                      font=('Helvetica', 10, 'bold'),
+                      padding=8,
+                      bordercolor=self.COR_PRIMARIA)
+        style.map('TButton',
+                background=[('active', self.COR_TERCIARIA),
+                          ('disabled', '#CCCCCC')],
+                foreground=[('active', self.COR_SECUNDARIA),
+                          ('disabled', '#666666')])
+        
+        # LabelFrame
+        style.configure('TLabelframe',
+                      background=self.COR_FUNDO,
+                      bordercolor=self.COR_PRIMARIA)
+        style.configure('TLabelframe.Label',
+                      background=self.COR_FUNDO,
+                      foreground=self.COR_PRIMARIA,
+                      font=('Helvetica', 10, 'bold'))
+        
+        # Barra de status
+        style.configure('Status.TLabel',
+                      background=self.COR_PRIMARIA,
+                      foreground=self.COR_TEXTO_CLARO,
+                      font=('Helvetica', 10),
+                      padding=5)
+
     def carregar_modelos(self):
         """Carrega os modelos com verificação detalhada"""
         try:
@@ -94,10 +151,20 @@ class AplicativoLibras:
             messagebox.showerror("Erro", f"Falha ao carregar modelos: {str(e)}")
 
     def criar_menu(self):
-        menubar = tk.Menu(self.root)
+        menubar = tk.Menu(self.root,
+                         bg=self.COR_FUNDO,
+                         fg=self.COR_TEXTO_ESCURO,
+                         activebackground=self.COR_PRIMARIA,
+                         activeforeground=self.COR_SECUNDARIA,
+                         tearoff=0)
         
         # Menu Níveis
-        menu_niveis = tk.Menu(menubar, tearoff=0)
+        menu_niveis = tk.Menu(menubar, tearoff=0,
+                            bg=self.COR_FUNDO,
+                            fg=self.COR_TEXTO_ESCURO,
+                            activebackground=self.COR_PRIMARIA,
+                            activeforeground=self.COR_SECUNDARIA)
+        
         for i in range(1, 6):
             menu_niveis.add_command(
                 label=f"Nível {i}", 
@@ -106,24 +173,44 @@ class AplicativoLibras:
         menubar.add_cascade(label="Níveis", menu=menu_niveis)
         
         # Menu Coleta
-        menu_coleta = tk.Menu(menubar, tearoff=0)
+        menu_coleta = tk.Menu(menubar, tearoff=0,
+                            bg=self.COR_FUNDO,
+                            fg=self.COR_TEXTO_ESCURO,
+                            activebackground=self.COR_PRIMARIA,
+                            activeforeground=self.COR_SECUNDARIA)
+        
         menu_coleta.add_command(label="Coletar Gestos", command=self.executar_coletar_gestos)
         menu_coleta.add_command(label="Coletar Letras", command=self.executar_coletar_letras)
         menubar.add_cascade(label="Coleta", menu=menu_coleta)
         
         # Menu Treinamento
-        menu_treinamento = tk.Menu(menubar, tearoff=0)
+        menu_treinamento = tk.Menu(menubar, tearoff=0,
+                                 bg=self.COR_FUNDO,
+                                 fg=self.COR_TEXTO_ESCURO,
+                                 activebackground=self.COR_PRIMARIA,
+                                 activeforeground=self.COR_SECUNDARIA)
+        
         menu_treinamento.add_command(label="Treinar Modelo Gestos", command=self.executar_treinar_gestos)
         menu_treinamento.add_command(label="Treinar Modelo Letras", command=self.executar_treinar_letras)
         menubar.add_cascade(label="Treinamento", menu=menu_treinamento)
         
         # Menu Utilitários
-        menu_util = tk.Menu(menubar, tearoff=0)
+        menu_util = tk.Menu(menubar, tearoff=0,
+                          bg=self.COR_FUNDO,
+                          fg=self.COR_TEXTO_ESCURO,
+                          activebackground=self.COR_PRIMARIA,
+                          activeforeground=self.COR_SECUNDARIA)
+        
         menu_util.add_command(label="Legendar Vídeo", command=self.executar_legendar_video)
         menubar.add_cascade(label="Utilitários", menu=menu_util)
         
         # Menu Ajuda
-        menu_ajuda = tk.Menu(menubar, tearoff=0)
+        menu_ajuda = tk.Menu(menubar, tearoff=0,
+                           bg=self.COR_FUNDO,
+                           fg=self.COR_TEXTO_ESCURO,
+                           activebackground=self.COR_PRIMARIA,
+                           activeforeground=self.COR_SECUNDARIA)
+        
         menu_ajuda.add_command(label="Sobre", command=self.mostrar_sobre)
         menu_ajuda.add_command(label="Verificar Modelos", command=self.verificar_modelos)
         menubar.add_cascade(label="Ajuda", menu=menu_ajuda)
@@ -160,53 +247,74 @@ class AplicativoLibras:
     def criar_barra_status(self):
         self.status_var = tk.StringVar()
         self.status_var.set(f"Pronto | Nível: {self.nivel_atual} | Pontos: {self.pontuacao}")
-        status_bar = ttk.Label(self.root, textvariable=self.status_var, relief=tk.SUNKEN, anchor=tk.W)
+        status_bar = ttk.Label(
+            self.root,
+            textvariable=self.status_var,
+            relief=tk.SUNKEN,
+            anchor=tk.W,
+            style='Status.TLabel'
+        )
         status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
     def criar_area_principal(self):
-        main_frame = ttk.Frame(self.root)
+        main_frame = ttk.Frame(self.root, style='TFrame')
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
         # Painel do gesto alvo
-        left_frame = ttk.LabelFrame(main_frame, text="Gesto Alvo")
+        left_frame = ttk.LabelFrame(
+            main_frame,
+            text="Gesto Alvo",
+            style='TLabelframe'
+        )
         left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         self.gesto_alvo_label = ttk.Label(
             left_frame,
             text="Selecione um nível para começar",
             font=('Helvetica', 24, 'bold'),
-            foreground='#2E86C1',
-            anchor=tk.CENTER
+            foreground=self.COR_PRIMARIA,
+            anchor=tk.CENTER,
+            style='TLabel'
         )
         self.gesto_alvo_label.pack(expand=True, fill=tk.BOTH)
         
         # Painel de feedback
-        self.feedback_frame = ttk.LabelFrame(left_frame, text="Feedback")
+        self.feedback_frame = ttk.LabelFrame(
+            left_frame,
+            text="Feedback",
+            style='TLabelframe'
+        )
         self.feedback_frame.pack(fill=tk.X, pady=10)
         
         self.feedback_label = ttk.Label(
             self.feedback_frame,
             text="",
             font=('Helvetica', 14),
-            anchor=tk.CENTER
+            anchor=tk.CENTER,
+            style='TLabel'
         )
         self.feedback_label.pack(pady=10)
         
         # Painel da câmera
-        right_frame = ttk.LabelFrame(main_frame, text="Sua Câmera")
+        right_frame = ttk.LabelFrame(
+            main_frame,
+            text="Sua Câmera",
+            style='TLabelframe'
+        )
         right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5, pady=5)
         
-        self.video_label = ttk.Label(right_frame)
+        self.video_label = ttk.Label(right_frame, style='TLabel')
         self.video_label.pack(fill=tk.BOTH, expand=True)
 
     def criar_painel_controle(self):
-        control_frame = ttk.Frame(self.root)
+        control_frame = ttk.Frame(self.root, style='TFrame')
         control_frame.pack(fill=tk.X, padx=10, pady=5)
         
         self.btn_camera = ttk.Button(
             control_frame,
             text="Iniciar Câmera",
-            command=self.toggle_camera
+            command=self.toggle_camera,
+            style='TButton'
         )
         self.btn_camera.pack(side=tk.LEFT, padx=5)
         
@@ -214,7 +322,8 @@ class AplicativoLibras:
             control_frame,
             text="Próximo Nível",
             command=self.proximo_nivel,
-            state=tk.DISABLED
+            state=tk.DISABLED,
+            style='TButton'
         )
         self.btn_proximo.pack(side=tk.LEFT, padx=5)
 
@@ -223,7 +332,7 @@ class AplicativoLibras:
         self.nivel_atual = nivel
         self.gesto_alvo = random.choice(self.gestos_por_nivel[nivel])
         self.gesto_alvo_label.config(text=self.gesto_alvo)
-        self.feedback_label.config(text="Mostre o gesto para a câmera", foreground='black')
+        self.feedback_label.config(text="Mostre o gesto para a câmera", foreground=self.COR_TEXTO_ESCURO)
         self.btn_proximo.config(state=tk.DISABLED)
         self.atualizar_status(f"Nível {nivel} | Gesto: {self.gesto_alvo}")
         self.buffer_gestos.clear()
@@ -287,14 +396,14 @@ class AplicativoLibras:
                 self.pontuacao += 10 * self.nivel_atual
                 self.feedback_label.config(
                     text=f"✅ Correto! {gesto_reconhecido}",
-                    foreground='green'
+                    foreground=self.COR_SUCESSO
                 )
                 self.btn_proximo.config(state=tk.NORMAL)
                 self.buffer_gestos.clear()  # Resetar buffer após reconhecimento
             elif gesto_reconhecido != self.ultimo_gesto_reconhecido:
                 self.feedback_label.config(
                     text=f"Reconhecido: {gesto_reconhecido} (Mostre: {self.gesto_alvo})",
-                    foreground='orange'
+                    foreground=self.COR_SECUNDARIA
                 )
             
             self.ultimo_gesto_reconhecido = gesto_reconhecido
@@ -324,14 +433,14 @@ class AplicativoLibras:
                     self.pontuacao += 10 * self.nivel_atual
                     self.feedback_label.config(
                         text=f"✅ Correto! {gesto_final} ({confianca:.0%} confiança)",
-                        foreground='green'
+                        foreground=self.COR_SUCESSO
                     )
                     self.btn_proximo.config(state=tk.NORMAL)
                     self.buffer_gestos.clear()  # Resetar buffer após reconhecimento
                 elif gesto_final != self.ultimo_gesto_reconhecido:
                     self.feedback_label.config(
                         text=f"Reconhecido: {gesto_final} (Mostre: {self.gesto_alvo})",
-                        foreground='orange'
+                        foreground=self.COR_SECUNDARIA
                     )
                 
                 self.ultimo_gesto_reconhecido = gesto_final
@@ -358,7 +467,7 @@ class AplicativoLibras:
                     self.buffer_gestos.clear()
                     self.feedback_label.config(
                         text="Mãos não detectadas. Mostre o gesto novamente",
-                        foreground='orange'
+                        foreground=self.COR_SECUNDARIA
                     )
             else:
                 self.frames_sem_maos = 0
@@ -517,6 +626,14 @@ class AplicativoLibras:
 
 if __name__ == "__main__":
     root = tk.Tk()
+    
+    # Configuração padrão para messagebox
+    root.option_add('*Dialog.msg.font', 'Helvetica 10')
+    root.option_add('*Dialog.msg.background', '#F5F5F5')
+    root.option_add('*Dialog.msg.foreground', '#333333')
+    root.option_add('*Dialog.msg.buttonBackground', '#6A0DAD')
+    root.option_add('*Dialog.msg.buttonForeground', '#FFFFFF')
+    
     app = AplicativoLibras(root)
     root.protocol("WM_DELETE_WINDOW", app.sair)
     root.mainloop()
