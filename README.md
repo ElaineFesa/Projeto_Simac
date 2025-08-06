@@ -92,5 +92,3 @@ python reconhecer_letras.py
 - Elaíne Gomes
 - Joyce Peres
 
-(🧠 Este projeto contou com o apoio de inteligência artificial generativa para otimizar a escrita de código e estruturação do projeto)
-
