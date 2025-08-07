@@ -25,7 +25,7 @@ class AplicativoLibras:
 
         # Configurações de tamanho
         self.root = root
-        self.root.title("Aprenda Libras")
+        self.root.title("LIA")
         self.root.state('zoomed')  # Iniciar maximizado
         self.root.configure(bg=self.COR_FUNDO)
 
@@ -136,7 +136,7 @@ class AplicativoLibras:
         icone = tk.Label(
             header_frame,
             text=self.icones_secoes.get(secao, "📁"),
-            font=("Helvetica", 24),
+            font=("Helvetica", 26),
             bg=self.COR_CARD,
             fg=cor_titulo
         )
@@ -146,7 +146,7 @@ class AplicativoLibras:
         titulo = tk.Label(
             header_frame,
             text=secao,
-            font=("Helvetica", 16, "bold"),
+            font=("Helvetica", 18, "bold"),
             bg=self.COR_CARD,
             fg=cor_titulo
         )
@@ -163,7 +163,7 @@ class AplicativoLibras:
         tk.Label(
             progress_frame,
             text="Progresso:",
-            font=("Helvetica", 10),
+            font=("Helvetica", 14),
             bg=self.COR_CARD,
             fg=self.COR_TEXTO_ESCURO
         ).pack(side=tk.LEFT, anchor="w")
@@ -181,7 +181,7 @@ class AplicativoLibras:
         tk.Label(
             progress_frame,
             text=f"{niveis_completos}/{total_niveis}",
-            font=("Helvetica", 10),
+            font=("Helvetica", 14),
             bg=self.COR_CARD,
             fg=self.COR_TEXTO_ESCURO
         ).pack(side=tk.LEFT)
@@ -206,7 +206,7 @@ class AplicativoLibras:
             btn_nivel = tk.Button(
                 btn_frame,
                 text=str(nivel),
-                font=("Helvetica", 12, "bold"),
+                font=("Helvetica", 14, "bold"),
                 width=3,
                 height=1,
                 bg=cor_botao,
@@ -240,8 +240,8 @@ class AplicativoLibras:
         
         tk.Label(
             splash_frame,
-            text="APRENDA LIBRAS",
-            font=("Helvetica", 30, "bold"),
+            text="LIA",
+            font=("Helvetica", 100, "bold"),
             bg=self.COR_PRIMARIA,
             fg=self.COR_TEXTO_CLARO
         ).pack(pady=10)
@@ -272,8 +272,8 @@ class AplicativoLibras:
         # Título
         tk.Label(
             header_frame,
-            text="Selecione uma Seção",
-            font=("Helvetica", 24, "bold"),
+            text="Seções",
+            font=("Helvetica", 26, "bold"),
             bg=self.COR_FUNDO,
             fg=self.COR_PRIMARIA
         ).pack(side=tk.LEFT)
@@ -286,7 +286,7 @@ class AplicativoLibras:
         tk.Label(
             info_frame,
             text=f"🏆 Pontuação: {self.pontuacao}",
-            font=("Helvetica", 12, "bold"),
+            font=("Helvetica", 18, "bold"),
             bg=self.COR_FUNDO,
             fg=self.COR_PRIMARIA
         ).pack(side=tk.LEFT, padx=10)
@@ -302,7 +302,7 @@ class AplicativoLibras:
         tk.Label(
             progress_frame,
             text="📊 Progresso Geral:",
-            font=("Helvetica", 10),
+            font=("Helvetica", 18),
             bg=self.COR_FUNDO,
             fg=self.COR_TEXTO_ESCURO
         ).pack(side=tk.LEFT)
@@ -320,7 +320,7 @@ class AplicativoLibras:
         tk.Label(
             progress_frame,
             text=f"{secoes_liberadas}/{total_secoes}",
-            font=("Helvetica", 10),
+            font=("Helvetica", 14),
             bg=self.COR_FUNDO,
             fg=self.COR_TEXTO_ESCURO
         ).pack(side=tk.LEFT)
@@ -346,7 +346,7 @@ class AplicativoLibras:
         scrollbar.pack(side="right", fill="y")
         
         # Organizar seções em grade responsiva
-        colunas = max(3, min(5, self.root.winfo_screenwidth() // 300))
+        colunas = max(3, min(4, self.root.winfo_screenwidth() // 300))
         
         for i, secao in enumerate(self.secoes):
             card = self.criar_card(scrollable_frame, secao)
@@ -372,7 +372,7 @@ class AplicativoLibras:
         btn_sair = tk.Button(
             footer_frame,
             text="Sair",
-            font=("Helvetica", 12),
+            font=("Helvetica", 14),
             bg=self.COR_ERRO,
             fg=self.COR_TEXTO_CLARO,
             padx=20,
@@ -383,8 +383,8 @@ class AplicativoLibras:
         
         btn_inicio = tk.Button(
             footer_frame,
-            text="Voltar ao Início",
-            font=("Helvetica", 12),
+            text="Voltar",
+            font=("Helvetica", 14),
             bg=self.COR_SECUNDARIA,
             fg=self.COR_TEXTO_ESCURO,
             padx=20,
@@ -403,7 +403,7 @@ class AplicativoLibras:
         btn_fechar = tk.Button(
             self.root,
             text="✕",
-            font=("Helvetica", 14),
+            font=("Helvetica", 16),
             bg=self.COR_FUNDO,
             fg=self.COR_ERRO,
             bd=0,
