@@ -5,8 +5,11 @@ import mediapipe as mp
 from PIL import Image, ImageTk
 import random
 import numpy as np
-from collections import deque
+from collections import deque, defaultdict
 import time
+import joblib
+from tensorflow.keras.models import load_model
+from pathlib import Path
 
 class AplicativoLibras:
     def __init__(self, root):
@@ -16,8 +19,8 @@ class AplicativoLibras:
         self.COR_FUNDO = "#F5F5F5"  # Cinza claro
         self.COR_TEXTO_CLARO = "#FFFFFF"  # Branco
         self.COR_TEXTO_ESCURO = "#333333"  # Cinza escuro
-        self.COR_SUCESSO = "#6A0DAD" 
-        self.COR_ERRO = "#6A0DAD" 
+        self.COR_SUCESSO = "#2E8B57"  # Verde para sucesso
+        self.COR_ERRO = "#DC143C"  # Vermelho para erro
         self.COR_BLOQUEADO = "#CCCCCC"  # Cinza
         self.COR_CARD = "#FFFFFF"  # Branco para cards
         self.COR_BORDA = "#E0E0E0"  # Cinza claro para bordas
@@ -38,6 +41,7 @@ class AplicativoLibras:
             min_tracking_confidence=0.5
         )
         self.mp_drawing = mp.solutions.drawing_utils
+        self.mp_drawing_styles = mp.solutions.drawing_styles
 
         # Estado do aplicativo
         self.cap = None
@@ -48,12 +52,17 @@ class AplicativoLibras:
         self.pontuacao = 0
         self.gesto_alvo = None
         self.buffer_gestos = deque(maxlen=30)
+        self.historico_predicoes = deque(maxlen=15)  # Para suavização
         self.frames_sem_maos = 0
         self.RESET_THRESHOLD = 10
         self.niveis_completos = {}
         self.secoes_liberadas = ["Alfabeto"]
         self.tempo_inicio = 0
         self.tempo_gasto = 0
+        self.ultimo_gesto_reconhecido = None
+
+        # Carregar modelo de gestos
+        self.modelo_gestos, self.le_gestos = self.carregar_modelo_gestos()
 
         # Estrutura de seções e níveis
         self.secoes = {
@@ -111,6 +120,28 @@ class AplicativoLibras:
             self.niveis_completos[secao] = []
 
         self.mostrar_tela_inicial()
+
+    def carregar_modelo_gestos(self):
+        """Carrega o modelo de gestos e o rotulador"""
+        try:
+            modelos_dir = Path("modelos")
+            modelo_path = modelos_dir / "modelo_gestos.h5"
+            rotulador_path = modelos_dir / "rotulador_gestos.pkl"
+            
+            if not modelo_path.exists() or not rotulador_path.exists():
+                messagebox.showerror("Erro", 
+                    "Modelo de gestos não encontrado!\n\n"
+                    "Verifique se os arquivos estão em:\n"
+                    f"{modelo_path}\n{rotulador_path}")
+                return None, None
+            
+            modelo = load_model(modelo_path)
+            le = joblib.load(rotulador_path)
+            print(f"Modelo carregado. Classes: {list(le.classes_)}")
+            return modelo, le
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao carregar modelo: {str(e)}")
+            return None, None
 
     def criar_card(self, parent, secao):
         """Cria um card estilizado para cada seção"""
@@ -255,12 +286,11 @@ class AplicativoLibras:
         # Configurar estilos
         style = ttk.Style()
         style.configure("Custom.Horizontal.TProgressbar", 
-                    troughcolor=self.COR_FUNDO, 
-                    background=self.COR_PRIMARIA,  # Roxo
-                    bordercolor=self.COR_BORDA,
-                    lightcolor=self.COR_PRIMARIA,  # Roxo claro
-                    darkcolor=self.COR_PRIMARIA)   # Roxo escuro
-
+                         troughcolor=self.COR_FUNDO, 
+                         background=self.COR_PRIMARIA,
+                         bordercolor=self.COR_BORDA,
+                         lightcolor=self.COR_PRIMARIA,
+                         darkcolor=self.COR_PRIMARIA)
         
         # Frame principal com expansão
         main_frame = tk.Frame(self.root, bg=self.COR_FUNDO)
@@ -803,15 +833,16 @@ class AplicativoLibras:
                     frame_rgb,
                     hand_landmarks,
                     self.mp_hands.HAND_CONNECTIONS,
-                    self.mp_drawing.DrawingSpec(color=(121, 22, 76), thickness=2, circle_radius=4),
-                    self.mp_drawing.DrawingSpec(color=(250, 44, 250), thickness=2, circle_radius=2)
+                    self.mp_drawing_styles.get_default_hand_landmarks_style(),
+                    self.mp_drawing_styles.get_default_hand_connections_style()
                 )
             
             landmarks = self.processar_landmarks(results)
             self.buffer_gestos.append(landmarks)
             
+            # Reconhece o gesto quando o buffer estiver cheio
             if len(self.buffer_gestos) == 30:
-                self.reconhecer_gesto_simulado()
+                self.reconhecer_gesto()
         else:
             self.frames_sem_maos += 1
             if self.frames_sem_maos > self.RESET_THRESHOLD and self.buffer_gestos:
@@ -820,8 +851,61 @@ class AplicativoLibras:
         
         return frame_rgb
 
+    def reconhecer_gesto(self):
+        """Reconhece o gesto usando o modelo carregado"""
+        if not self.modelo_gestos or not self.le_gestos or not self.gesto_alvo:
+            # Se não tiver modelo, usa reconhecimento simulado
+            self.reconhecer_gesto_simulado()
+            return
+        
+        try:
+            # Prepara os dados para o modelo (30 frames, 126 features cada)
+            entrada = np.array(self.buffer_gestos).reshape(1, 30, 126)
+            
+            # Faz a predição
+            preds = self.modelo_gestos.predict(entrada, verbose=0)[0]
+            classe_idx = np.argmax(preds)
+            confianca = preds[classe_idx]
+            gesto_reconhecido = self.le_gestos.classes_[classe_idx]
+            
+            # Atualiza histórico para suavização
+            self.historico_predicoes.append(gesto_reconhecido)
+            
+            # Determina o gesto mais frequente no histórico
+            contagem = defaultdict(int)
+            for g in self.historico_predicoes:
+                contagem[g] += 1
+            gesto_final = max(contagem.items(), key=lambda x: x[1])[0]
+            
+            # Verifica se acertou o gesto alvo
+            if confianca > 0.7 and gesto_final == self.gesto_alvo:
+                self.pontuacao += 10 * self.nivel_atual
+                self.pontuacao_label.config(text=f"{self.pontuacao}")
+                self.feedback_label.config(
+                    text=f"✅ Correto! {gesto_final} ({confianca:.0%} confiança)",
+                    foreground=self.COR_SUCESSO
+                )
+                self.root.after(1500, self.proxima_letra)
+                self.buffer_gestos.clear()
+                self.historico_predicoes.clear()
+            elif gesto_reconhecido != self.ultimo_gesto_reconhecido:
+                self.feedback_label.config(
+                    text=f"Reconhecido: {gesto_reconhecido} (Mostre: {self.gesto_alvo})",
+                    foreground=self.COR_SECUNDARIA
+                )
+            
+            self.ultimo_gesto_reconhecido = gesto_reconhecido
+            
+        except Exception as e:
+            print(f"Erro ao reconhecer gesto: {str(e)}")
+            self.feedback_label.config(
+                text="Erro no reconhecimento. Tente novamente",
+                foreground=self.COR_ERRO
+            )
+            self.reconhecer_gesto_simulado()
+
     def reconhecer_gesto_simulado(self):
-        """Simula reconhecimento de gestos"""
+        """Simula reconhecimento de gestos (usado quando não há modelo)"""
         if random.random() < 0.3:  # 30% de chance de acerto
             self.pontuacao += 10
             self.pontuacao_label.config(text=f"{self.pontuacao}")
