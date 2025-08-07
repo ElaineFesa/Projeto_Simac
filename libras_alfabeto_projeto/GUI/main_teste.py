@@ -16,8 +16,8 @@ class AplicativoLibras:
         self.COR_FUNDO = "#F5F5F5"  # Cinza claro
         self.COR_TEXTO_CLARO = "#FFFFFF"  # Branco
         self.COR_TEXTO_ESCURO = "#333333"  # Cinza escuro
-        self.COR_SUCESSO = "#2E8B57"  # Verde
-        self.COR_ERRO = "#6A0DAD"  # Vermelho
+        self.COR_SUCESSO = "#6A0DAD" 
+        self.COR_ERRO = "#6A0DAD" 
         self.COR_BLOQUEADO = "#CCCCCC"  # Cinza
         self.COR_CARD = "#FFFFFF"  # Branco para cards
         self.COR_BORDA = "#E0E0E0"  # Cinza claro para bordas
@@ -255,11 +255,12 @@ class AplicativoLibras:
         # Configurar estilos
         style = ttk.Style()
         style.configure("Custom.Horizontal.TProgressbar", 
-                         troughcolor=self.COR_FUNDO, 
-                         background=self.COR_PRIMARIA,
-                         bordercolor=self.COR_BORDA,
-                         lightcolor=self.COR_PRIMARIA,
-                         darkcolor=self.COR_PRIMARIA)
+                    troughcolor=self.COR_FUNDO, 
+                    background=self.COR_PRIMARIA,  # Roxo
+                    bordercolor=self.COR_BORDA,
+                    lightcolor=self.COR_PRIMARIA,  # Roxo claro
+                    darkcolor=self.COR_PRIMARIA)   # Roxo escuro
+
         
         # Frame principal com expansão
         main_frame = tk.Frame(self.root, bg=self.COR_FUNDO)
