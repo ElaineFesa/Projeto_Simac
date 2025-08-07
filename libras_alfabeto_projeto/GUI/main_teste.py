@@ -19,7 +19,7 @@ class AplicativoLibras:
         self.COR_FUNDO = "#F5F5F5"  # Cinza claro
         self.COR_TEXTO_CLARO = "#FFFFFF"  # Branco
         self.COR_TEXTO_ESCURO = "#333333"  # Cinza escuro
-        self.COR_SUCESSO = "#2E8B57"  # Verde para sucesso
+        self.COR_SUCESSO = "#6A0DAD"  # Verde para sucesso
         self.COR_ERRO = "#DC143C"  # Vermelho para erro
         self.COR_BLOQUEADO = "#CCCCCC"  # Cinza
         self.COR_CARD = "#FFFFFF"  # Branco para cards
