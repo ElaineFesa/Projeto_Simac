@@ -334,7 +334,13 @@ class AplicativoLibras:
             btn_nivel.pack()
         
         return card_frame
-
+    def verificar_camera(self):
+        """Verifica se a câmera está disponível"""
+        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        if cap.isOpened():
+            cap.release()
+            return True
+        return False
     def mostrar_tela_parabens(self):
         """Tela de parabéns ao completar nível"""
         self.limpar_tela()
@@ -424,6 +430,10 @@ class AplicativoLibras:
 
     def iniciar_nivel_real(self, secao, nivel):
         """Inicia o nível após o carregamento"""
+        if not self.verificar_camera():
+            messagebox.showerror("Erro", "Câmera não disponível. Conecte uma câmera e tente novamente.")
+            self.mostrar_tela_secoes()
+            return
         self.secao_atual = secao
         self.nivel_atual = nivel
         self.letras_nivel = self.secoes[secao][nivel]
@@ -628,66 +638,108 @@ class AplicativoLibras:
 
     # Métodos de câmera e reconhecimento
     def iniciar_camera(self):
-        """Inicia a câmera"""
+        """Inicia a câmera com tratamento de erros e configurações adaptativas"""
         if self.running:
             return
             
-        self.cap = cv2.VideoCapture(0)
-        if not self.cap.isOpened():
-            messagebox.showerror("Erro", "Não foi possível acessar a câmera")
-            return
+        # Libera a câmera se já estiver em uso
+        if self.cap:
+            self.cap.release()
         
-        # Configurar resolução máxima suportada
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-        self.cap.set(cv2.CAP_PROP_FPS, 30)
-        
-        self.running = True
-        self.frame_count = 0
-        self.atualizar_frame()
+        try:
+            self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # Usa DirectShow no Windows
+            if not self.cap.isOpened():
+                messagebox.showerror("Erro", "Não foi possível acessar a câmera")
+                return
+            
+            # Configura resolução de forma adaptativa
+            for res in [(640, 480), (1280, 720), (1920, 1080)]:
+                self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, res[0])
+                self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, res[1])
+                actual_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                actual_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                if actual_width >= res[0] and actual_height >= res[1]:
+                    break
+            
+            # Configura FPS
+            self.cap.set(cv2.CAP_PROP_FPS, 30)
+            
+            self.running = True
+            self.frame_count = 0
+            self.atualizar_frame()
+            
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao iniciar câmera: {str(e)}")
+            self.parar_camera()
 
     def atualizar_frame(self):
-        """Atualiza o frame da câmera"""
+        """Atualiza o frame da câmera com otimizações"""
         if self.running:
-            self.frame_count += 1
-            ret, frame = self.cap.read()
-            
-            if ret and self.frame_count % (self.skip_frames + 1) == 0:
-                frame = self.processar_frame(frame)
-                self.mostrar_frame(frame)
-            
-            self.root.after(30, self.atualizar_frame)
+            try:
+                self.frame_count += 1
+                ret, frame = self.cap.read()
+                
+                if not ret:
+                    self.frames_sem_maos += 1
+                    if self.frames_sem_maos > self.RESET_THRESHOLD:
+                        self.parar_camera()
+                        messagebox.showwarning("Aviso", "Problema ao capturar frames da câmera")
+                        self.iniciar_camera()  # Tenta reiniciar
+                    return
+                
+                # Processa apenas alguns frames para reduzir carga
+                if self.frame_count % (self.skip_frames + 1) == 0:
+                    frame = self.processar_frame(frame)
+                    self.mostrar_frame(frame)
+                
+                # Ajusta dinamicamente o atraso com base no desempenho
+                delay = 30 if len(self.buffer_gestos) < 10 else 50
+                self.root.after(delay, self.atualizar_frame)
+                
+            except Exception as e:
+                print(f"Erro no frame: {str(e)}")
+                self.parar_camera()
 
     def processar_frame(self, frame):
-        """Processa o frame para detecção de mãos"""
-        frame = cv2.flip(frame, 1)
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = self.hands.process(frame_rgb)
-        
-        if results.multi_hand_landmarks:
-            self.frames_sem_maos = 0
-            for hand_landmarks in results.multi_hand_landmarks:
-                self.mp_drawing.draw_landmarks(
-                    frame_rgb,
-                    hand_landmarks,
-                    self.mp_hands.HAND_CONNECTIONS,
-                    self.mp_drawing_styles.get_default_hand_landmarks_style(),
-                    self.mp_drawing_styles.get_default_hand_connections_style()
-                )
+        """Processa o frame para detecção de mãos com tratamento de erros"""
+        try:
+            frame = cv2.flip(frame, 1)
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
-            landmarks = self.processar_landmarks(results)
-            self.buffer_gestos.append(landmarks)
+            # Reduz o tamanho do frame para processamento mais rápido
+            small_frame = cv2.resize(frame_rgb, (0, 0), fx=0.5, fy=0.5)
             
-            # Reconhece o gesto quando o buffer estiver cheio
-            if len(self.buffer_gestos) == 30:
-                self.reconhecer_gesto()
-        else:
-            self.frames_sem_maos += 1
-            if self.frames_sem_maos > self.RESET_THRESHOLD and self.buffer_gestos:
-                self.buffer_gestos.clear()
-                self.feedback_label.config(text="Mãos não detectadas", fg=self.COR_ERRO)
+            results = self.hands.process(small_frame)
+            
+            if results.multi_hand_landmarks:
+                self.frames_sem_maos = 0
+                for hand_landmarks in results.multi_hand_landmarks:
+                    self.mp_drawing.draw_landmarks(
+                        frame_rgb,
+                        hand_landmarks,
+                        self.mp_hands.HAND_CONNECTIONS,
+                        self.mp_drawing_styles.get_default_hand_landmarks_style(),
+                        self.mp_drawing_styles.get_default_hand_connections_style()
+                    )
+                
+                landmarks = self.processar_landmarks(results)
+                if landmarks is not None:
+                    self.buffer_gestos.append(landmarks)
+                
+                # Reconhece o gesto quando o buffer estiver cheio
+                if len(self.buffer_gestos) == 30:
+                    self.reconhecer_gesto()
+            else:
+                self.frames_sem_maos += 1
+                if self.frames_sem_maos > self.RESET_THRESHOLD and self.buffer_gestos:
+                    self.buffer_gestos.clear()
+                    self.feedback_label.config(text="Mãos não detectadas", fg=self.COR_ERRO)
+            
+            return frame_rgb
         
-        return frame_rgb
+        except Exception as e:
+            print(f"Erro ao processar frame: {str(e)}")
+            return frame
 
     def reconhecer_gesto(self):
         """Reconhece o gesto usando o modelo carregado"""
