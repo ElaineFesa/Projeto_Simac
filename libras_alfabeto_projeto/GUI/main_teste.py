@@ -19,7 +19,7 @@ class AplicativoLibras:
         self.COR_FUNDO = "#F5F5F5"  # Cinza claro
         self.COR_TEXTO_CLARO = "#FFFFFF"  # Branco
         self.COR_TEXTO_ESCURO = "#333333"  # Cinza escuro
-        self.COR_SUCESSO = "#6A0DAD"  # Verde para sucesso
+        self.COR_SUCESSO = "#2E8B57"  # Verde para sucesso
         self.COR_ERRO = "#DC143C"  # Vermelho para erro
         self.COR_BLOQUEADO = "#CCCCCC"  # Cinza
         self.COR_CARD = "#FFFFFF"  # Branco para cards
@@ -60,13 +60,6 @@ class AplicativoLibras:
         self.tempo_inicio = 0
         self.tempo_gasto = 0
         self.ultimo_gesto_reconhecido = None
-        self.ultimos_landmarks = None
-
-        # Parâmetros de reconhecimento
-        self.SEQUENCE_LENGTH = 30
-        self.MIN_CONFIDENCE = 0.7
-        self.prediction_counter = 0
-        self.prediction_interval = 5  # Predizer a cada 5 frames
 
         # Carregar modelo de gestos
         self.modelo_gestos, self.le_gestos = self.carregar_modelo_gestos()
@@ -674,10 +667,10 @@ class AplicativoLibras:
         ).grid(row=0, column=0, sticky="ew")
         
         # Container para o vídeo com bordas internas
-        video_container = tk.Frame(right_frame, bg="black", padx=0, pady=0)
-        video_container.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
+        video_container = tk.Frame(right_frame, bg="white", padx=0, pady=0)
+        video_container.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
         
-        self.video_label = tk.Label(video_container, bg="black")
+        self.video_label = tk.Label(video_container, bg="white")
         self.video_label.pack(fill=tk.BOTH, expand=True)
         
         # Controles inferiores
@@ -797,7 +790,7 @@ class AplicativoLibras:
             self.btn_camera.config(text="⏸️ Parar Câmera")
 
     def iniciar_camera(self):
-        """Inicia a câmera com configurações otimizadas"""
+        """Inicia a câmera"""
         if self.running:
             return
             
@@ -806,69 +799,36 @@ class AplicativoLibras:
             messagebox.showerror("Erro", "Não foi possível acessar a câmera")
             return
         
-        # Configurações otimizadas para melhor performance
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        # Configurar resolução máxima suportada
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
         self.cap.set(cv2.CAP_PROP_FPS, 30)
         
         self.running = True
         self.frame_count = 0
-        self.atualizar_frame()  # Iniciar o loop de atualização
+        self.atualizar_frame()
 
     def atualizar_frame(self):
-        """Atualiza o frame da câmera com controle de tempo"""
+        """Atualiza o frame da câmera"""
         if self.running:
-            start_time = time.time()  # Marcar início do processamento
-            
+            self.frame_count += 1
             ret, frame = self.cap.read()
-            if ret:
-                # Processar e mostrar o frame
-                processed_frame = self.processar_frame(frame)
-                self.mostrar_frame(processed_frame)
             
-            # Calcular tempo de processamento e ajustar delay
-            processing_time = time.time() - start_time
-            delay_ms = max(1, int(30 - (processing_time * 1000)))  # Manter ~30 FPS
+            if ret and self.frame_count % (self.skip_frames + 1) == 0:
+                frame = self.processar_frame(frame)
+                self.mostrar_frame(frame)
             
-            # Agendar próxima atualização
-            self.root.after(delay_ms, self.atualizar_frame)
+            self.root.after(30, self.atualizar_frame)
 
     def processar_frame(self, frame):
-        """Processa o frame para detecção de mãos com visualização consistente"""
+        """Processa o frame para detecção de mãos"""
         frame = cv2.flip(frame, 1)
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = self.hands.process(frame_rgb)
         
-        # Processar detecção de mãos apenas em frames alternados
-        self.frame_count += 1
-        processar_deteccao = (self.frame_count % (self.skip_frames + 1) == 0)
-        
-        if processar_deteccao:
-            results = self.hands.process(frame_rgb)
-            
-            if results.multi_hand_landmarks:
-                self.frames_sem_maos = 0
-                # Armazenar os landmarks para desenho consistente
-                self.ultimos_landmarks = results.multi_hand_landmarks
-                
-                landmarks = self.processar_landmarks(results)
-                self.buffer_gestos.append(landmarks)
-                
-                # Reconhece o gesto quando o buffer estiver cheio
-                if len(self.buffer_gestos) == self.SEQUENCE_LENGTH:
-                    self.prediction_counter += 1
-                    if self.prediction_counter % self.prediction_interval == 0:
-                        self.reconhecer_gesto()
-            else:
-                self.frames_sem_maos += 1
-                self.ultimos_landmarks = None
-                if self.frames_sem_maos > self.RESET_THRESHOLD and self.buffer_gestos:
-                    self.buffer_gestos.clear()
-                    self.historico_predicoes.clear()
-                    self.feedback_label.config(text="Mãos não detectadas", fg=self.COR_ERRO)
-        
-        # Sempre desenhar os últimos landmarks detectados (mesmo em frames pulados)
-        if self.ultimos_landmarks:
-            for hand_landmarks in self.ultimos_landmarks:
+        if results.multi_hand_landmarks:
+            self.frames_sem_maos = 0
+            for hand_landmarks in results.multi_hand_landmarks:
                 self.mp_drawing.draw_landmarks(
                     frame_rgb,
                     hand_landmarks,
@@ -876,6 +836,18 @@ class AplicativoLibras:
                     self.mp_drawing_styles.get_default_hand_landmarks_style(),
                     self.mp_drawing_styles.get_default_hand_connections_style()
                 )
+            
+            landmarks = self.processar_landmarks(results)
+            self.buffer_gestos.append(landmarks)
+            
+            # Reconhece o gesto quando o buffer estiver cheio
+            if len(self.buffer_gestos) == 30:
+                self.reconhecer_gesto()
+        else:
+            self.frames_sem_maos += 1
+            if self.frames_sem_maos > self.RESET_THRESHOLD and self.buffer_gestos:
+                self.buffer_gestos.clear()
+                self.feedback_label.config(text="Mãos não detectadas", fg=self.COR_ERRO)
         
         return frame_rgb
 
@@ -888,7 +860,7 @@ class AplicativoLibras:
         
         try:
             # Prepara os dados para o modelo (30 frames, 126 features cada)
-            entrada = np.array(self.buffer_gestos).reshape(1, self.SEQUENCE_LENGTH, 126)
+            entrada = np.array(self.buffer_gestos).reshape(1, 30, 126)
             
             # Faz a predição
             preds = self.modelo_gestos.predict(entrada, verbose=0)[0]
@@ -906,11 +878,11 @@ class AplicativoLibras:
             gesto_final = max(contagem.items(), key=lambda x: x[1])[0]
             
             # Verifica se acertou o gesto alvo
-            if confianca > self.MIN_CONFIDENCE and gesto_final == self.gesto_alvo:
+            if confianca > 0.7 and gesto_final == self.gesto_alvo:
                 self.pontuacao += 10 * self.nivel_atual
                 self.pontuacao_label.config(text=f"{self.pontuacao}")
                 self.feedback_label.config(
-                    text=f"✅ Correto! {gesto_final} ({confianca:.0%} confiança)",
+                    text=f"✅ Correto! {gesto_final})",
                     foreground=self.COR_SUCESSO
                 )
                 self.root.after(1500, self.proxima_letra)
@@ -935,7 +907,7 @@ class AplicativoLibras:
     def reconhecer_gesto_simulado(self):
         """Simula reconhecimento de gestos (usado quando não há modelo)"""
         if random.random() < 0.3:  # 30% de chance de acerto
-            self.pontuacao += 10 * self.nivel_atual
+            self.pontuacao += 10
             self.pontuacao_label.config(text=f"{self.pontuacao}")
             self.feedback_label.config(text=f"✅ Correto! {self.gesto_alvo}", fg=self.COR_SUCESSO)
             self.root.after(1500, self.proxima_letra)
@@ -944,33 +916,50 @@ class AplicativoLibras:
             self.feedback_label.config(text=f"Tente novamente: {self.gesto_alvo}", fg=self.COR_ERRO)
 
     def processar_landmarks(self, results):
-        """Processa landmarks e retorna array padronizado"""
+        """Processa os landmarks das mãos"""
         landmarks = []
         if results.multi_hand_landmarks:
             for hand in results.multi_hand_landmarks:
-                for lm in hand.landmark:
-                    landmarks.extend([lm.x, lm.y, lm.z])
+                landmarks.extend([[lm.x, lm.y, lm.z] for lm in hand.landmark])
         
-        # Padroniza para 2 mãos (42 landmarks * 3 = 126 valores)
-        if len(landmarks) < 126:
-            landmarks.extend([0] * (126 - len(landmarks)))
-        else:
-            landmarks = landmarks[:126]
+        landmarks = landmarks[:42]  # Limita a 2 mãos
+        if len(landmarks) < 42:
+            landmarks.extend([[0, 0, 0]] * (42 - len(landmarks)))
         
-        return np.array(landmarks)
+        return np.array(landmarks).flatten()
 
     def mostrar_frame(self, frame):
-        """Mostra o frame na interface de forma eficiente"""
-        # Reduzir a resolução para melhorar performance
-        frame = cv2.resize(frame, (640, 480))
-        
-        # Converter para formato compatível com Tkinter
+        """Mostra o frame na interface"""
+        # Redimensionar a imagem para caber no espaço disponível
         img = Image.fromarray(frame)
-        img_tk = ImageTk.PhotoImage(image=img)
         
-        # Atualizar o label mantendo referência
-        self.video_label.imgtk = img_tk
-        self.video_label.config(image=img_tk)
+        # Obter dimensões do label de vídeo
+        label_width = self.video_label.winfo_width()
+        label_height = self.video_label.winfo_height()
+        
+        # Se o label ainda não tem dimensões definidas, usar um padrão
+        if label_width <= 1 or label_height <= 1:
+            label_width = 800
+            label_height = 600
+        
+        # Manter aspect ratio
+        img_ratio = img.width / img.height
+        label_ratio = label_width / label_height
+        
+        if label_ratio > img_ratio:
+            # Ajustar pela altura
+            new_height = label_height
+            new_width = int(new_height * img_ratio)
+        else:
+            # Ajustar pela largura
+            new_width = label_width
+            new_height = int(new_width / img_ratio)
+        
+        img = img.resize((new_width, new_height), Image.LANCZOS)
+        img = ImageTk.PhotoImage(image=img)
+        
+        self.video_label.imgtk = img
+        self.video_label.config(image=img)
 
     def parar_camera(self):
         """Para a câmera"""
