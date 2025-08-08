@@ -628,41 +628,55 @@ class AplicativoLibras:
         
         # Frame principal com grid expansível
         main_frame = tk.Frame(self.root, bg=self.COR_FUNDO)
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
         
-        # Configurar grid (2 linhas: 1 para cabeçalho, 2 para conteúdo)
-        main_frame.rowconfigure(1, weight=1)
+        # Configurar grid (3 linhas: cabeçalho, conteúdo, controles)
+        main_frame.rowconfigure(1, weight=1)  # Linha do conteúdo principal
         main_frame.columnconfigure(0, weight=1)
         
-        # Barra superior
-        top_frame = tk.Frame(main_frame, bg=self.COR_PRIMARIA)
-        top_frame.grid(row=0, column=0, sticky="ew", padx=0, pady=0, ipady=10)
+        # Barra superior - cabeçalho do nível
+        header_frame = tk.Frame(
+            main_frame,
+            bg=self.COR_PRIMARIA,
+            height=60,
+            bd=0,
+            highlightthickness=0,
+            relief=tk.FLAT
+        )
+        header_frame.grid(row=0, column=0, sticky="ew", columnspan=2, pady=(0, 20))
+        header_frame.grid_propagate(False)  # Mantém a altura fixa
+        
+        # Conteúdo do cabeçalho
+        inner_header = tk.Frame(header_frame, bg=self.COR_PRIMARIA)
+        inner_header.pack(fill=tk.BOTH, expand=True, padx=20)
         
         # Botão voltar
         btn_voltar = tk.Button(
-            top_frame,
-            text="← Voltar",
-            font=("Helvetica", 12, "bold"),
+            inner_header,
+            text="←",
+            font=("Helvetica", 16, "bold"),
             bg=self.COR_PRIMARIA,
             fg=self.COR_TEXTO_CLARO,
             bd=0,
+            activebackground=self.COR_PRIMARIA,
+            activeforeground=self.COR_SECUNDARIA,
             command=self.mostrar_tela_secoes
         )
-        btn_voltar.pack(side=tk.LEFT, padx=10)
+        btn_voltar.pack(side=tk.LEFT, padx=(0, 15))
         
-        # Título
+        # Título do nível
         lbl_titulo = tk.Label(
-            top_frame,
-            text=f"{self.secao_atual} - Nível {self.nivel_atual}",
-            font=("Helvetica", 16, "bold"),
+            inner_header,
+            text=f"{secao.upper()} - NÍVEL {nivel}",
+            font=("Helvetica", 18, "bold"),
             bg=self.COR_PRIMARIA,
             fg=self.COR_TEXTO_CLARO
         )
         lbl_titulo.pack(side=tk.LEFT, expand=True)
         
         # Informações (tempo e pontuação)
-        info_frame = tk.Frame(top_frame, bg=self.COR_PRIMARIA)
-        info_frame.pack(side=tk.RIGHT, padx=10)
+        info_frame = tk.Frame(inner_header, bg=self.COR_PRIMARIA)
+        info_frame.pack(side=tk.RIGHT)
         
         # Timer
         timer_frame = tk.Frame(info_frame, bg=self.COR_PRIMARIA)
@@ -670,8 +684,8 @@ class AplicativoLibras:
         
         tk.Label(
             timer_frame,
-            text="⏱️ ",
-            font=("Helvetica", 12),
+            text="⏱️",
+            font=("Helvetica", 14),
             bg=self.COR_PRIMARIA,
             fg=self.COR_SECUNDARIA
         ).pack(side=tk.LEFT)
@@ -679,7 +693,7 @@ class AplicativoLibras:
         self.tempo_label = tk.Label(
             timer_frame,
             text="00:00",
-            font=("Helvetica", 12, "bold"),
+            font=("Helvetica", 14, "bold"),
             bg=self.COR_PRIMARIA,
             fg=self.COR_TEXTO_CLARO
         )
@@ -687,12 +701,12 @@ class AplicativoLibras:
         
         # Pontuação
         pontos_frame = tk.Frame(info_frame, bg=self.COR_PRIMARIA)
-        pontos_frame.pack(side=tk.LEFT)
+        pontos_frame.pack(side=tk.LEFT, padx=(0, 10))
         
         tk.Label(
             pontos_frame,
-            text="🏆 ",
-            font=("Helvetica", 12),
+            text="🏆",
+            font=("Helvetica", 14),
             bg=self.COR_PRIMARIA,
             fg=self.COR_SECUNDARIA
         ).pack(side=tk.LEFT)
@@ -700,7 +714,7 @@ class AplicativoLibras:
         self.pontuacao_label = tk.Label(
             pontos_frame,
             text=f"{self.pontuacao}",
-            font=("Helvetica", 12, "bold"),
+            font=("Helvetica", 14, "bold"),
             bg=self.COR_PRIMARIA,
             fg=self.COR_TEXTO_CLARO
         )
@@ -708,20 +722,21 @@ class AplicativoLibras:
         
         # Frame do conteúdo principal (gesto alvo + espaço para câmera)
         content_frame = tk.Frame(main_frame, bg=self.COR_FUNDO)
-        content_frame.grid(row=1, column=0, sticky="nsew", padx=0, pady=10)
+        content_frame.grid(row=1, column=0, sticky="nsew", pady=(0, 20))
         
-        # Configurar grid para conteúdo (1 linha, 2 colunas)
-        content_frame.columnconfigure(0, weight=1)  # Gesto alvo
+        # Configurar grid para conteúdo (1 linha, 2 colunas com pesos iguais)
+        content_frame.columnconfigure(0, weight=1)
+        content_frame.columnconfigure(1, weight=1)
         content_frame.rowconfigure(0, weight=1)
         
-        # Frame do gesto alvo
+        # Frame do gesto alvo - card estilizado
         left_frame = tk.Frame(
             content_frame,
             bg=self.COR_CARD,
-            bd=1,
-            relief=tk.RAISED,
+            bd=0,
             highlightbackground=self.COR_BORDA,
-            highlightthickness=1
+            highlightthickness=1,
+            relief=tk.RAISED
         )
         left_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10), pady=0)
         
@@ -729,33 +744,40 @@ class AplicativoLibras:
         left_frame.columnconfigure(0, weight=1)
         left_frame.rowconfigure(1, weight=1)
         
+        # Cabeçalho do card
         tk.Label(
             left_frame,
-            text="Gesto Alvo",
+            text="GESTO ALVO",
             font=("Helvetica", 14, "bold"),
-            bg=self.COR_CARD,
-            fg=self.COR_PRIMARIA,
+            bg=self.COR_PRIMARIA,
+            fg=self.COR_TEXTO_CLARO,
             pady=10
         ).grid(row=0, column=0, sticky="ew")
         
+        # Área do gesto (centralizada)
+        gesto_container = tk.Frame(left_frame, bg=self.COR_CARD)
+        gesto_container.grid(row=1, column=0, sticky="nsew")
+        gesto_container.columnconfigure(0, weight=1)
+        gesto_container.rowconfigure(0, weight=1)
+        
         self.gesto_alvo_label = tk.Label(
-            left_frame,
+            gesto_container,
             text="",
             font=("Helvetica", 72, "bold"),
             bg=self.COR_CARD,
             fg=self.COR_PRIMARIA,
             pady=20
         )
-        self.gesto_alvo_label.grid(row=1, column=0, sticky="nsew")
+        self.gesto_alvo_label.grid(row=0, column=0)
         
-        # Frame da câmera (agora apenas um botão para iniciar)
+        # Frame da câmera - card estilizado
         right_frame = tk.Frame(
             content_frame,
             bg=self.COR_CARD,
-            bd=1,
-            relief=tk.RAISED,
+            bd=0,
             highlightbackground=self.COR_BORDA,
-            highlightthickness=1
+            highlightthickness=1,
+            relief=tk.RAISED
         )
         right_frame.grid(row=0, column=1, sticky="nsew", padx=(10, 0), pady=0)
         
@@ -763,49 +785,78 @@ class AplicativoLibras:
         right_frame.columnconfigure(0, weight=1)
         right_frame.rowconfigure(1, weight=1)
         
+        # Cabeçalho do card
         tk.Label(
             right_frame,
-            text="Reconhecimento",
+            text="RECONHECIMENTO",
             font=("Helvetica", 14, "bold"),
-            bg=self.COR_CARD,
-            fg=self.COR_PRIMARIA,
+            bg=self.COR_PRIMARIA,
+            fg=self.COR_TEXTO_CLARO,
             pady=10
         ).grid(row=0, column=0, sticky="ew")
         
-        # Botão para iniciar reconhecimento
+        # Área de conteúdo (centralizada)
+        camera_container = tk.Frame(right_frame, bg=self.COR_CARD)
+        camera_container.grid(row=1, column=0, sticky="nsew")
+        camera_container.columnconfigure(0, weight=1)
+        camera_container.rowconfigure(0, weight=1)
+        
+        # Botão para iniciar reconhecimento (estilizado)
+        btn_style = {
+            "font": ("Helvetica", 16, "bold"),
+            "bg": self.COR_PRIMARIA,
+            "fg": self.COR_TEXTO_CLARO,
+            "activebackground": self.COR_SECUNDARIA,
+            "activeforeground": self.COR_TEXTO_ESCURO,
+            "bd": 0,
+            "padx": 30,
+            "pady": 15,
+            "relief": tk.FLAT,
+            "highlightthickness": 0
+        }
+        
         btn_iniciar_reconhecimento = tk.Button(
-            right_frame,
-            text="Iniciar Reconhecimento",
-            font=("Helvetica", 14),
-            bg=self.COR_PRIMARIA,
-            fg=self.COR_TEXTO_CLARO,
+            camera_container,
+            text="INICIAR RECONHECIMENTO",
+            **btn_style,
             command=self.iniciar_reconhecimento
         )
-        btn_iniciar_reconhecimento.grid(row=1, column=0, sticky="nsew", padx=20, pady=20)
+        btn_iniciar_reconhecimento.grid(row=0, column=0)
         
-        # Controles inferiores
-        control_frame = tk.Frame(main_frame, bg=self.COR_FUNDO)
-        control_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 5))
+        # Adicionar ícone ao botão
+        btn_iniciar_reconhecimento.config(compound=tk.LEFT, image='')  # Pode adicionar um ícone aqui
         
-        # Configurar grid para controles
-        control_frame.columnconfigure(0, weight=1)  # Feedback
-        control_frame.columnconfigure(1, weight=1)  # Progresso
+        # Controles inferiores (feedback e progresso)
+        footer_frame = tk.Frame(main_frame, bg=self.COR_FUNDO)
+        footer_frame.grid(row=2, column=0, sticky="ew")
+        
+        # Configurar grid para controles (2 colunas)
+        footer_frame.columnconfigure(0, weight=3)  # Feedback
+        footer_frame.columnconfigure(1, weight=1)  # Progresso
+        
+        # Feedback (mensagens para o usuário)
+        feedback_container = tk.Frame(footer_frame, bg=self.COR_FUNDO)
+        feedback_container.grid(row=0, column=0, sticky="w")
         
         self.feedback_label = tk.Label(
-            control_frame,
-            text="Mostre o gesto para a câmera",
+            feedback_container,
+            text="Mostre o gesto alvo para a câmera",
             font=("Helvetica", 14),
             bg=self.COR_FUNDO,
-            fg=self.COR_TEXTO_ESCURO
+            fg=self.COR_TEXTO_ESCURO,
+            pady=10
         )
-        self.feedback_label.grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.feedback_label.pack(anchor="w")
         
-        # Barra de progresso
-        self.progress_frame = tk.Frame(control_frame, bg=self.COR_FUNDO)
-        self.progress_frame.grid(row=0, column=1, padx=5, pady=5, sticky="e")
+        # Barra de progresso (estilizada)
+        progress_container = tk.Frame(footer_frame, bg=self.COR_FUNDO)
+        progress_container.grid(row=0, column=1, sticky="e")
+        
+        progress_inner = tk.Frame(progress_container, bg=self.COR_FUNDO)
+        progress_inner.pack()
         
         self.progress_label = tk.Label(
-            self.progress_frame,
+            progress_inner,
             text="Progresso:",
             font=("Helvetica", 12),
             bg=self.COR_FUNDO,
@@ -813,16 +864,26 @@ class AplicativoLibras:
         )
         self.progress_label.pack(side=tk.LEFT)
         
+        # Barra de progresso personalizada
+        style = ttk.Style()
+        style.configure("Nivel.Horizontal.TProgressbar", 
+                    troughcolor=self.COR_BORDA,
+                    background=self.COR_PRIMARIA,
+                    bordercolor=self.COR_BORDA,
+                    lightcolor=self.COR_PRIMARIA,
+                    darkcolor=self.COR_PRIMARIA)
+        
         self.progress_bar = ttk.Progressbar(
-            self.progress_frame,
+            progress_inner,
             orient=tk.HORIZONTAL,
             length=150,
-            mode='determinate'
+            mode='determinate',
+            style="Nivel.Horizontal.TProgressbar"
         )
         self.progress_bar.pack(side=tk.LEFT, padx=5)
         
         self.progress_text = tk.Label(
-            self.progress_frame,
+            progress_inner,
             text="0/0",
             font=("Helvetica", 12),
             bg=self.COR_FUNDO,
@@ -830,6 +891,7 @@ class AplicativoLibras:
         )
         self.progress_text.pack(side=tk.LEFT)
         
+        # Inicializar componentes
         self.atualizar_progresso()
         self.proxima_letra()
         self.atualizar_tempo()
