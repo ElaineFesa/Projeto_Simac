@@ -611,8 +611,10 @@ class AplicativoLibras:
         tk.Label(frame, text="Sua Câmera", font=("Helvetica", 14, "bold"),
                 bg=self.COR_CARD, fg=self.COR_PRIMARIA, pady=10).grid(row=0, column=0, sticky="ew")
         
-        video_container = tk.Frame(frame, bg="white", padx=0, pady=0)
+        # Definir um tamanho fixo para o container da câmera
+        video_container = tk.Frame(frame, bg="white", width=640, height=480, padx=0, pady=0)
         video_container.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
+        video_container.grid_propagate(False)  # Isso impede que o frame redimensione
         
         self.video_label = tk.Label(video_container, bg="white")
         self.video_label.pack(fill=tk.BOTH, expand=True)
@@ -758,9 +760,9 @@ class AplicativoLibras:
                 messagebox.showerror("Erro", "Timeout ao acessar a câmera")
                 return
             
-            # Configurações balanceadas entre performance e qualidade
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 800)  # Resolução intermediária
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
+            # Configurações com tamanho fixo que corresponde ao display
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)  # Resolução fixa
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
             self.cap.set(cv2.CAP_PROP_FPS, 20)  # FPS reduzido para melhor performance
             
             # Configurações de buffer para reduzir latência
@@ -899,25 +901,12 @@ class AplicativoLibras:
         return np.array(landmarks).flatten()
 
     def mostrar_frame(self, frame):
-        """Mostra o frame na interface"""
+        """Mostra o frame na interface com tamanho fixo"""
         img = Image.fromarray(frame)
         
-        label_width = self.video_label.winfo_width()
-        label_height = self.video_label.winfo_height()
-        
-        if label_width <= 1 or label_height <= 1:
-            label_width = 800
-            label_height = 600
-        
-        img_ratio = img.width / img.height
-        label_ratio = label_width / label_height
-        
-        if label_ratio > img_ratio:
-            new_height = label_height
-            new_width = int(new_height * img_ratio)
-        else:
-            new_width = label_width
-            new_height = int(new_width / img_ratio)
+        # Tamanho fixo para a imagem (pode ajustar conforme necessário)
+        new_width = 640
+        new_height = 480
         
         img = img.resize((new_width, new_height), Image.LANCZOS)
         img = ImageTk.PhotoImage(image=img)
