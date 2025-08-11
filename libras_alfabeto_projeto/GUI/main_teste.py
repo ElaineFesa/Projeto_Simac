@@ -27,12 +27,15 @@ class AplicativoLibras:
         
         # Estado do aplicativo
         self.inicializar_estado()
+        # Pré-carrega modelo e rótulos logo no início
+        if not self.modelo_gestos or not self.le_gestos:
+            self.modelo_gestos, self.le_gestos = self.carregar_modelo_gestos()
         
         # Estrutura de seções e níveis
         self.secoes = {
             "Alfabeto": {
                 1: ["A", "E", "I", "O", "U"],
-                2: ["B", "C", "D", "G", "I", "L"],
+                2: ["B", "C", "D", "G", "L"],
                 3: ["M", "N", "O", "P", "Q", "R"],
                 4: ["S", "T", "U", "V", "W"],
                 5: ["H", "J", "K", "X"],
@@ -53,25 +56,30 @@ class AplicativoLibras:
             },
             "Alimentos": {
                 1: ["MAÇÃ", "LARANJA", "UVA", "MELANCIA"],
-                2: ["LIMÃO", "MELÃO", "TOMATE", "ABACAXI"]
+                2: ["LIMÃO", "MELÃO", "TOMATE", "ABACAXI"],
+                3: ["BATATA", "CENOURA", "BETERRABA", "CEBOLA"],
+                4: ["ABOBRINHA", "PEPINO", "ALHO", "MANDIOCA"],
+                5: ["ÁGUA", "SUCO", "LEITE", "CAFÉ", "REFRIGERANTE"]
             },
             "Cores": {
                 1: ["AZUL", "AMARELO", "VERDE", "VERMELHO"],
                 2: ["ROSA", "ROXO", "LARANJA", "BRANCO", "PRETO"]
             },
             "Animais": {
-                1: ["CÃO", "GATO", "PEIXE", "CAVALO"],
-                2: ["MACACO", "LEÃO", "BALEIA", "PÁSSARO"],
-                3: ["FORMIGA", "ABELHA", "BORBOLETA"]
+                1: ["CÃO", "GATO", "PEIXE", "CAVALO", "PÁSSARO"],
+                2: ["MACACO", "LEÃO", "BALEIA"],
+                3: ["FORMIGA", "ABELHA", "BORBOLETA", "MINHOCA"]
             },
-            "Pronomes": {
-                1: ["EU", "VOCÊ", "ELES", "NÓS"]
+            "Adjetivos": {
+                1: ["BONITO", "FEIO", "ALTO", "BAIXO"],
+                2: ["GRANDE", "PEQUENO", "VELHO", "NOVO"],
+                3: ["RÁPIDO", "DEVAGAR", "QUENTE", "FRIO"]
             }
         }
         
         self.icones_secoes = {
             "Alfabeto": "🔤", "Saudações": "👋", "Família": "👨‍👩‍👧‍👦",
-            "Alimentos": "🍎", "Cores": "🎨", "Animais": "🐶", "Pronomes": "📍"
+            "Alimentos": "🍎", "Cores": "🎨", "Animais": "🐶", "Adjetivos": "📝"
         }
         
         for secao in self.secoes:
@@ -94,14 +102,15 @@ class AplicativoLibras:
         self.COR_SOMBRA = "#DDDDDD"  # Cor para sombra
 
     def configurar_mediapipe(self):
-        """Configura o MediaPipe para detecção de mãos"""
+        """Configura o MediaPipe para detecção de mãos - criado uma vez só"""
         self.mp_hands = mp.solutions.hands
-        self.hands = self.mp_hands.Hands(
-            static_image_mode=False,
-            max_num_hands=2,
-            min_detection_confidence=0.7,
-            min_tracking_confidence=0.5
-        )
+        if not hasattr(self, 'hands') or self.hands is None:
+            self.hands = self.mp_hands.Hands(
+                static_image_mode=False,
+                max_num_hands=2,
+                min_detection_confidence=0.7,
+                min_tracking_confidence=0.5
+            )
         self.mp_drawing = mp.solutions.drawing_utils
         self.mp_drawing_styles = mp.solutions.drawing_styles
 
@@ -110,7 +119,7 @@ class AplicativoLibras:
         self.cap = None
         self.running = False
         self.frame_count = 0
-        self.skip_frames = 2
+        self.skip_frames = 1  # Reduzido para melhor performance
         self.nivel_atual = 1
         self.pontuacao = 0
         self.gesto_alvo = None
@@ -124,6 +133,7 @@ class AplicativoLibras:
         self.tempo_gasto = 0
         self.ultimo_gesto_reconhecido = None
         self.modelo_gestos, self.le_gestos = self.carregar_modelo_gestos()
+        self.camera_timeout = 5  # Timeout de 5 segundos para inicialização da câmera
 
     def carregar_modelo_gestos(self):
         """Carrega o modelo de gestos e o rotulador"""
@@ -151,15 +161,24 @@ class AplicativoLibras:
     def mostrar_tela_inicial(self):
         """Tela de splash com logo"""
         self.limpar_tela()
-        
-        splash_frame = tk.Frame(self.root, bg=self.COR_PRIMARIA)
-        splash_frame.place(relx=0.5, rely=0.5, anchor="center")
-        
-        tk.Label(splash_frame, text="👋", font=("Helvetica", 100),
-                bg=self.COR_PRIMARIA, fg=self.COR_SECUNDARIA).pack(pady=20)
-        tk.Label(splash_frame, text="LIA", font=("Helvetica", 100, "bold"),
-                bg=self.COR_PRIMARIA, fg=self.COR_TEXTO_CLARO).pack(pady=10)
-        
+
+        # Canvas para desenhar círculo roxo
+        canvas_size = 350  # Tamanho do círculo
+        splash_canvas = tk.Canvas(self.root, width=canvas_size, height=canvas_size,
+                                bg=self.COR_FUNDO, highlightthickness=0)
+        splash_canvas.place(relx=0.5, rely=0.5, anchor="center")
+
+        # Desenha círculo roxo
+        splash_canvas.create_oval(0, 0, canvas_size, canvas_size, fill=self.COR_PRIMARIA, outline="")
+
+        # Emoji 👋
+        splash_canvas.create_text(canvas_size/2, canvas_size/2 - 50,
+                                text="👋", font=("Helvetica", 100), fill=self.COR_SECUNDARIA)
+
+        # Texto LIA
+        splash_canvas.create_text(canvas_size/2, canvas_size/2 + 70,
+                                text="LIA", font=("Helvetica", 100, "bold"), fill=self.COR_TEXTO_CLARO)
+
         self.root.after(1500, self.mostrar_tela_secoes)
 
     def mostrar_tela_secoes(self):
@@ -334,13 +353,7 @@ class AplicativoLibras:
             btn_nivel.pack()
         
         return card_frame
-    def verificar_camera(self):
-        """Verifica se a câmera está disponível"""
-        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-        if cap.isOpened():
-            cap.release()
-            return True
-        return False
+
     def mostrar_tela_parabens(self):
         """Tela de parabéns ao completar nível"""
         self.limpar_tela()
@@ -398,7 +411,16 @@ class AplicativoLibras:
         self.root.after(100, lambda: self.carregar_nivel_background(secao, nivel, 0))
 
     def carregar_nivel_background(self, secao, nivel, progresso):
-        """Atualiza o progresso em background"""
+        """Atualiza o progresso em background com estágios específicos"""
+        if progresso <= 33:
+            self.loading_stage.config(text="Inicializando câmera...")
+            if progresso == 10:
+                self.pre_iniciar_camera()
+        elif progresso <= 66:
+            self.loading_stage.config(text="Carregando modelo de reconhecimento...")
+        else:
+            self.loading_stage.config(text="Preparando interface...")
+        
         if progresso <= 100:
             self.loading_progress['value'] = progresso
             self.loading_percent.config(text=f"{progresso}%")
@@ -412,13 +434,24 @@ class AplicativoLibras:
             self.iniciar_nivel_real(secao, nivel)
 
     def criar_tela_carregamento(self, secao, nivel):
-        """Cria a tela de carregamento"""
+        """Cria a tela de carregamento com mais informações"""
         self.loading_frame = tk.Frame(self.root, bg=self.COR_FUNDO)
         self.loading_frame.place(relx=0.5, rely=0.5, anchor="center")
         
         tk.Label(self.loading_frame, text=f"Preparando nível {nivel} de {secao}...",
                 font=("Helvetica", 18, "bold"), bg=self.COR_FUNDO,
-                fg=self.COR_PRIMARIA).pack(pady=20)
+                fg=self.COR_PRIMARIA).pack(pady=10)
+        
+        # Adiciona mensagem de estágio de carregamento
+        self.loading_stage = tk.Label(self.loading_frame, text="Inicializando componentes...",
+                                    font=("Helvetica", 12), bg=self.COR_FUNDO,
+                                    fg=self.COR_TEXTO_ESCURO)
+        self.loading_stage.pack(pady=5)
+        
+        # Adiciona um spinner de carregamento
+        self.loading_spinner = tk.Label(self.loading_frame, text="⏳", font=("Helvetica", 24),
+                                      bg=self.COR_FUNDO, fg=self.COR_PRIMARIA)
+        self.loading_spinner.pack(pady=10)
         
         self.loading_progress = ttk.Progressbar(self.loading_frame, orient=tk.HORIZONTAL,
                                               length=300, mode='determinate')
@@ -427,13 +460,39 @@ class AplicativoLibras:
         self.loading_percent = tk.Label(self.loading_frame, text="0%", font=("Helvetica", 14),
                                       bg=self.COR_FUNDO, fg=self.COR_TEXTO_ESCURO)
         self.loading_percent.pack(pady=5)
+        
+        # Animação do spinner
+        self.animar_spinner()
+
+    def animar_spinner(self):
+        """Anima o spinner de carregamento"""
+        spinners = ["⏳", "⌛", "⏳", "⌛"]
+        if hasattr(self, 'loading_spinner'):
+            current = self.loading_spinner.cget("text")
+            idx = (spinners.index(current) + 1) % len(spinners) if current in spinners else 0
+            self.loading_spinner.config(text=spinners[idx])
+            self.root.after(300, self.animar_spinner)
+
+    def pre_iniciar_camera(self):
+        """Pré-inicia a câmera em modo leve para reduzir tempo de espera"""
+        try:
+            # Configuração leve para inicialização rápida
+            self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+            if self.cap.isOpened():
+                self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)  # Resolução menor inicial
+                self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                self.cap.set(cv2.CAP_PROP_FPS, 15)
+                
+                # Lê um frame para "aquecer" a câmera
+                ret, frame = self.cap.read()
+                if ret:
+                    self.cap.release()  # Libera para ser reiniciada corretamente depois
+                    self.cap = None
+        except Exception as e:
+            print(f"Erro na pré-inicialização da câmera: {e}")
 
     def iniciar_nivel_real(self, secao, nivel):
         """Inicia o nível após o carregamento"""
-        if not self.verificar_camera():
-            messagebox.showerror("Erro", "Câmera não disponível. Conecte uma câmera e tente novamente.")
-            self.mostrar_tela_secoes()
-            return
         self.secao_atual = secao
         self.nivel_atual = nivel
         self.letras_nivel = self.secoes[secao][nivel]
@@ -513,7 +572,7 @@ class AplicativoLibras:
         self.pontuacao_label.pack(side=tk.LEFT)
 
     def criar_frame_gesto_alvo(self, parent):
-        """Cria o frame do gesto alvo"""
+        """Cria o frame do gesto alvo com a letra e imagem correspondente"""
         frame = tk.Frame(parent, bg=self.COR_CARD, bd=1, relief=tk.RAISED,
                         highlightbackground=self.COR_BORDA, highlightthickness=1)
         frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10), pady=0)
@@ -523,9 +582,21 @@ class AplicativoLibras:
         tk.Label(frame, text="Gesto Alvo", font=("Helvetica", 14, "bold"),
                 bg=self.COR_CARD, fg=self.COR_PRIMARIA, pady=10).grid(row=0, column=0, sticky="ew")
         
-        self.gesto_alvo_label = tk.Label(frame, text="", font=("Helvetica", 72, "bold"),
-                                       bg=self.COR_CARD, fg=self.COR_PRIMARIA, pady=20)
-        self.gesto_alvo_label.grid(row=1, column=0, sticky="nsew")
+        # Container para a letra e imagem
+        content_frame = tk.Frame(frame, bg=self.COR_CARD)
+        content_frame.grid(row=1, column=0, sticky="nsew", padx=20, pady=20)
+        content_frame.columnconfigure(0, weight=1)
+        content_frame.rowconfigure(0, weight=1)
+        content_frame.rowconfigure(1, weight=1)
+        
+        # Label para a letra grande
+        self.gesto_alvo_label = tk.Label(content_frame, text="", font=("Helvetica", 72, "bold"),
+                                    bg=self.COR_CARD, fg=self.COR_PRIMARIA)
+        self.gesto_alvo_label.grid(row=0, column=0, sticky="s")
+        
+        # Label para a imagem da letra em libras
+        self.imagem_letra_label = tk.Label(content_frame, bg=self.COR_CARD)
+        self.imagem_letra_label.grid(row=1, column=0, sticky="n", pady=(20, 0))
         
         return frame
 
@@ -605,13 +676,16 @@ class AplicativoLibras:
         self.progress_text.config(text=f"{atual}/{total}")
 
     def proxima_letra(self):
-        """Avança para a próxima letra"""
+        """Avança para a próxima letra e atualiza a imagem correspondente"""
         if self.letra_atual_idx < len(self.letras_nivel):
             self.gesto_alvo = self.letras_nivel[self.letra_atual_idx]
             self.gesto_alvo_label.config(text=self.gesto_alvo)
             self.letra_atual_idx += 1
             self.feedback_label.config(text="Mostre o gesto para a câmera", fg=self.COR_TEXTO_ESCURO)
             self.atualizar_progresso()
+            
+            # Atualizar a imagem da letra em libras
+            self.atualizar_imagem_letra()
         else:
             self.tempo_gasto = time.time() - self.tempo_inicio
             
@@ -627,6 +701,36 @@ class AplicativoLibras:
             
             self.mostrar_tela_parabens()
 
+    def atualizar_imagem_letra(self):
+        """Atualiza a imagem da letra em libras correspondente"""
+        if not hasattr(self, 'gesto_alvo') or not self.gesto_alvo:
+            return
+        
+        # Caminho para a pasta com as imagens das letras
+        letra = self.gesto_alvo.lower()  # Assumindo que as imagens estão em minúsculo
+        caminho_imagem = f"libras_alfabeto_projeto/imagens/{letra}.png"  # Ajuste o caminho conforme necessário
+        
+        try:
+            # Carrega a imagem e redimensiona
+            img = Image.open(caminho_imagem)
+            img = img.resize((200, 200), Image.LANCZOS)  # Tamanho ajustável
+            img = ImageTk.PhotoImage(img)
+            
+            # Atualiza o label da imagem
+            self.imagem_letra_label.config(image=img)
+            self.imagem_letra_label.image = img  # Mantém uma referência
+            
+        except FileNotFoundError:
+            # Se a imagem não existir, mostra um placeholder
+            self.imagem_letra_label.config(text="Imagem não disponível", 
+                                        font=("Helvetica", 14),
+                                        fg=self.COR_ERRO)
+        except Exception as e:
+            print(f"Erro ao carregar imagem: {e}")
+            self.imagem_letra_label.config(text="Erro ao carregar imagem",
+                                        font=("Helvetica", 14),
+                                        fg=self.COR_ERRO)
+
     def toggle_camera(self):
         """Liga/desliga a câmera"""
         if self.running:
@@ -638,108 +742,103 @@ class AplicativoLibras:
 
     # Métodos de câmera e reconhecimento
     def iniciar_camera(self):
-        """Inicia a câmera com tratamento de erros e configurações adaptativas"""
+        """Inicia a câmera com configurações otimizadas"""
         if self.running:
             return
             
-        # Libera a câmera se já estiver em uso
-        if self.cap:
-            self.cap.release()
-        
         try:
-            self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # Usa DirectShow no Windows
+            start_time = time.time()
+            self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+            
+            # Configura timeout para inicialização
+            while not self.cap.isOpened() and (time.time() - start_time) < self.camera_timeout:
+                time.sleep(0.1)
+                
             if not self.cap.isOpened():
-                messagebox.showerror("Erro", "Não foi possível acessar a câmera")
+                messagebox.showerror("Erro", "Timeout ao acessar a câmera")
                 return
             
-            # Configura resolução de forma adaptativa
-            for res in [(640, 480), (1280, 720), (1920, 1080)]:
-                self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, res[0])
-                self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, res[1])
-                actual_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                actual_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                if actual_width >= res[0] and actual_height >= res[1]:
-                    break
+            # Configurações balanceadas entre performance e qualidade
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 800)  # Resolução intermediária
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
+            self.cap.set(cv2.CAP_PROP_FPS, 20)  # FPS reduzido para melhor performance
             
-            # Configura FPS
-            self.cap.set(cv2.CAP_PROP_FPS, 30)
+            # Configurações de buffer para reduzir latência
+            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             
             self.running = True
             self.frame_count = 0
-            self.atualizar_frame()
+            self.skip_frames = 1  # Processa mais frames
             
+            # Feedback visual
+            self.feedback_label.config(text="Câmera iniciada - Ajustando...")
+            
+            self.atualizar_frame()
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao iniciar câmera: {str(e)}")
-            self.parar_camera()
+            self.cap = None
 
     def atualizar_frame(self):
-        """Atualiza o frame da câmera com otimizações"""
-        if self.running:
-            try:
-                self.frame_count += 1
-                ret, frame = self.cap.read()
+        """Atualiza o frame da câmera com tratamento de erros"""
+        if not self.running:
+            return
+            
+        try:
+            self.frame_count += 1
+            ret, frame = self.cap.read()
+            
+            if not ret:
+                print("Erro ao capturar frame - tentando reiniciar câmera")
+                self.reiniciar_camera()
+                return
                 
-                if not ret:
-                    self.frames_sem_maos += 1
-                    if self.frames_sem_maos > self.RESET_THRESHOLD:
-                        self.parar_camera()
-                        messagebox.showwarning("Aviso", "Problema ao capturar frames da câmera")
-                        self.iniciar_camera()  # Tenta reiniciar
-                    return
+            if self.frame_count % (self.skip_frames + 1) == 0:
+                frame = self.processar_frame(frame)
+                self.mostrar_frame(frame)
                 
-                # Processa apenas alguns frames para reduzir carga
-                if self.frame_count % (self.skip_frames + 1) == 0:
-                    frame = self.processar_frame(frame)
-                    self.mostrar_frame(frame)
-                
-                # Ajusta dinamicamente o atraso com base no desempenho
-                delay = 30 if len(self.buffer_gestos) < 10 else 50
-                self.root.after(delay, self.atualizar_frame)
-                
-            except Exception as e:
-                print(f"Erro no frame: {str(e)}")
-                self.parar_camera()
+        except Exception as e:
+            print(f"Erro no loop da câmera: {e}")
+            self.reiniciar_camera()
+        finally:
+            if self.running:
+                self.root.after(30, self.atualizar_frame)
+
+    def reiniciar_camera(self):
+        """Tenta reiniciar a câmera em caso de falha"""
+        self.parar_camera()
+        time.sleep(0.5)
+        self.iniciar_camera()
 
     def processar_frame(self, frame):
-        """Processa o frame para detecção de mãos com tratamento de erros"""
-        try:
-            frame = cv2.flip(frame, 1)
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            
-            # Reduz o tamanho do frame para processamento mais rápido
-            small_frame = cv2.resize(frame_rgb, (0, 0), fx=0.5, fy=0.5)
-            
-            results = self.hands.process(small_frame)
-            
-            if results.multi_hand_landmarks:
-                self.frames_sem_maos = 0
-                for hand_landmarks in results.multi_hand_landmarks:
-                    self.mp_drawing.draw_landmarks(
-                        frame_rgb,
-                        hand_landmarks,
-                        self.mp_hands.HAND_CONNECTIONS,
-                        self.mp_drawing_styles.get_default_hand_landmarks_style(),
-                        self.mp_drawing_styles.get_default_hand_connections_style()
-                    )
-                
-                landmarks = self.processar_landmarks(results)
-                if landmarks is not None:
-                    self.buffer_gestos.append(landmarks)
-                
-                # Reconhece o gesto quando o buffer estiver cheio
-                if len(self.buffer_gestos) == 30:
-                    self.reconhecer_gesto()
-            else:
-                self.frames_sem_maos += 1
-                if self.frames_sem_maos > self.RESET_THRESHOLD and self.buffer_gestos:
-                    self.buffer_gestos.clear()
-                    self.feedback_label.config(text="Mãos não detectadas", fg=self.COR_ERRO)
-            
-            return frame_rgb
+        """Processa o frame para detecção de mãos"""
+        frame = cv2.flip(frame, 1)
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = self.hands.process(frame_rgb)
         
-        except Exception as e:
-            print(f"Erro ao processar frame: {str(e)}")
-            return frame
+        if results.multi_hand_landmarks:
+            self.frames_sem_maos = 0
+            for hand_landmarks in results.multi_hand_landmarks:
+                self.mp_drawing.draw_landmarks(
+                    frame_rgb,
+                    hand_landmarks,
+                    self.mp_hands.HAND_CONNECTIONS,
+                    self.mp_drawing_styles.get_default_hand_landmarks_style(),
+                    self.mp_drawing_styles.get_default_hand_connections_style()
+                )
+            
+            landmarks = self.processar_landmarks(results)
+            self.buffer_gestos.append(landmarks)
+            
+            # Reconhece o gesto quando o buffer estiver cheio
+            if len(self.buffer_gestos) == 30:
+                self.reconhecer_gesto()
+        else:
+            self.frames_sem_maos += 1
+            if self.frames_sem_maos > self.RESET_THRESHOLD and self.buffer_gestos:
+                self.buffer_gestos.clear()
+                self.feedback_label.config(text="Mãos não detectadas", fg=self.COR_ERRO)
+        
+        return frame_rgb
 
     def reconhecer_gesto(self):
         """Reconhece o gesto usando o modelo carregado"""
@@ -785,18 +884,6 @@ class AplicativoLibras:
                 text="Erro no reconhecimento. Tente novamente",
                 foreground=self.COR_ERRO
             )
-            self.reconhecer_gesto_simulado()
-
-    def reconhecer_gesto_simulado(self):
-        """Simula reconhecimento de gestos (usado quando não há modelo)"""
-        if random.random() < 0.3:  # 30% de chance de acerto
-            self.pontuacao += 10
-            self.pontuacao_label.config(text=f"{self.pontuacao}")
-            self.feedback_label.config(text=f"✅ Correto! {self.gesto_alvo}", fg=self.COR_SUCESSO)
-            self.root.after(1500, self.proxima_letra)
-            self.buffer_gestos.clear()
-        else:
-            self.feedback_label.config(text=f"Tente novamente: {self.gesto_alvo}", fg=self.COR_ERRO)
 
     def processar_landmarks(self, results):
         """Processa os landmarks das mãos"""
