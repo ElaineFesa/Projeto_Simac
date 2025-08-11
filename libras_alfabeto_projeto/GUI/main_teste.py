@@ -847,26 +847,30 @@ class AplicativoLibras:
         if not self.modelo_gestos or not self.le_gestos or not self.gesto_alvo:
             self.reconhecer_gesto_simulado()
             return
-        
+    
         try:
             entrada = np.array(self.buffer_gestos).reshape(1, 30, 126)
             preds = self.modelo_gestos.predict(entrada, verbose=0)[0]
             classe_idx = np.argmax(preds)
             confianca = preds[classe_idx]
             gesto_reconhecido = self.le_gestos.classes_[classe_idx]
-            
-            self.historico_predicoes.append(gesto_reconhecido)
+
+            # 🔹 Normaliza para ignorar mão esquerda/direita
+            gesto_normalizado = gesto_reconhecido.replace("_DIR", "").replace("_ESQ", "")
+            alvo_normalizado = self.gesto_alvo.replace("_DIR", "").replace("_ESQ", "")
+
+            self.historico_predicoes.append(gesto_normalizado)
             
             contagem = defaultdict(int)
             for g in self.historico_predicoes:
                 contagem[g] += 1
             gesto_final = max(contagem.items(), key=lambda x: x[1])[0]
             
-            if confianca > 0.7 and gesto_final == self.gesto_alvo:
+            if confianca > 0.7 and gesto_final == alvo_normalizado:
                 self.pontuacao += 10 * self.nivel_atual
                 self.pontuacao_label.config(text=f"{self.pontuacao}")
                 self.feedback_label.config(
-                    text=f"✅ Correto! {gesto_final})",
+                    text=f"✅ Correto! {gesto_final}",
                     foreground=self.COR_SUCESSO
                 )
                 self.root.after(1500, self.proxima_letra)
