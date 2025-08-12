@@ -281,10 +281,6 @@ class AplicativoLibras:
         tk.Button(footer_frame, text="Sair", font=("Helvetica", 14),
                  bg=self.COR_ERRO, fg=self.COR_TEXTO_CLARO, padx=20, pady=5,
                  command=self.sair).pack(side=tk.RIGHT, padx=10)
-        
-        tk.Button(footer_frame, text="Voltar", font=("Helvetica", 14),
-                 bg=self.COR_SECUNDARIA, fg=self.COR_TEXTO_ESCURO, padx=20, pady=5,
-                 command=self.mostrar_tela_inicial).pack(side=tk.RIGHT)
 
     def criar_card(self, parent, secao):
         """Cria um card estilizado para cada seção"""
@@ -855,7 +851,7 @@ class AplicativoLibras:
             confianca = preds[classe_idx]
             gesto_reconhecido = self.le_gestos.classes_[classe_idx]
 
-            # 🔹 Normaliza para ignorar mão esquerda/direita
+            # 🔹 Normaliza para ignorar mão esquerda/direitaxeu 
             gesto_normalizado = gesto_reconhecido.replace("_DIR", "").replace("_ESQ", "")
             alvo_normalizado = self.gesto_alvo.replace("_DIR", "").replace("_ESQ", "")
 
