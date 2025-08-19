@@ -234,7 +234,17 @@ class AplicativoLibras:
                        bordercolor=self.COR_BORDA,
                        lightcolor=self.COR_PRIMARIA,
                        darkcolor=self.COR_PRIMARIA)
-
+    # Adicione este método na classe
+    def configurar_estilo_botoes_redondos(self):
+        style = ttk.Style()
+        style.configure("Round.TButton", 
+                    background=self.COR_PRIMARIA,
+                    foreground=self.COR_TEXTO_CLARO,
+                    borderwidth=0,
+                    focusthickness=3,
+                    focuscolor=self.COR_PRIMARIA)
+        style.map("Round.TButton", 
+                background=[('active', self.COR_SECUNDARIA)])
     def criar_cabecalho_secoes(self, parent):
         """Cria o cabeçalho da tela de seções"""
         header_frame = tk.Frame(parent, bg=self.COR_FUNDO)
@@ -244,6 +254,24 @@ class AplicativoLibras:
         tk.Label(header_frame, text="Seções", font=("Helvetica", 26, "bold"),
                 bg=self.COR_FUNDO, fg=self.COR_PRIMARIA).pack(side=tk.LEFT)
         
+        # Botão Sobre redondo
+        btn_sobre_canvas = tk.Canvas(header_frame, width=40, height=40, 
+                                    bg=self.COR_FUNDO, highlightthickness=0)
+        btn_sobre_canvas.pack(side=tk.LEFT, padx=10)
+
+        # Desenhar círculo roxo
+        circulo = btn_sobre_canvas.create_oval(2, 2, 38, 38, 
+                                            fill=self.COR_PRIMARIA, outline="")
+
+        # Adicionar texto "ⓘ" no centro
+        btn_sobre_canvas.create_text(20, 20, text="ⓘ", 
+                                font=("Helvetica", 16, "bold"),
+                                fill=self.COR_TEXTO_CLARO)
+
+        # Tornar o canvas clicável
+        btn_sobre_canvas.bind("<Button-1>", lambda e: self.mostrar_sobre())
+        btn_sobre_canvas.bind("<Enter>", lambda e: btn_sobre_canvas.itemconfig(circulo, fill=self.COR_SECUNDARIA))
+        btn_sobre_canvas.bind("<Leave>", lambda e: btn_sobre_canvas.itemconfig(circulo, fill=self.COR_PRIMARIA))
         # Informações à direita
         info_frame = tk.Frame(header_frame, bg=self.COR_FUNDO)
         info_frame.pack(side=tk.RIGHT, padx=10)
@@ -277,11 +305,26 @@ class AplicativoLibras:
         """Cria o rodapé da tela de seções"""
         footer_frame = tk.Frame(parent, bg=self.COR_FUNDO)
         footer_frame.pack(fill=tk.X, pady=(10, 0))
+
         
         tk.Button(footer_frame, text="Sair", font=("Helvetica", 14),
                  bg=self.COR_ERRO, fg=self.COR_TEXTO_CLARO, padx=20, pady=5,
                  command=self.sair).pack(side=tk.RIGHT, padx=10)
-
+        
+    def mostrar_sobre(self):
+        """Exibe informações sobre o projeto"""
+        sobre_texto = (
+            "📘 Sobre o Projeto\n\n"
+            "O aplicativo **LIA** (Libras com Inteligência Artificial) foi desenvolvido para "
+            "auxiliar no aprendizado da Língua Brasileira de Sinais (Libras), "
+            "utilizando visão computacional e redes neurais.\n\n"
+            "🔹 Reconhecimento de gestos em tempo real com MediaPipe + TensorFlow.\n"
+            "🔹 Estrutura de níveis e seções temáticas para facilitar a aprendizagem.\n"
+            "🔹 Interface amigável e interativa para prática dos sinais.\n\n"
+            "Este projeto busca unir tecnologia e inclusão, promovendo o acesso à comunicação."
+        )
+        messagebox.showinfo("Sobre", sobre_texto)
+        
     def criar_card(self, parent, secao):
         """Cria um card estilizado para cada seção"""
         secao_liberada = secao in self.secoes_liberadas
@@ -920,6 +963,16 @@ class AplicativoLibras:
         if self.cap:
             self.cap.release()
         self.cap = None
+        # Se o widget ainda existir, mostra tela preta
+        if hasattr(self, "video_label") and self.video_label.winfo_exists():
+            try:
+                img = np.zeros((480, 640, 3), dtype=np.uint8)  # imagem preta
+                img = Image.fromarray(img)
+                img = ImageTk.PhotoImage(image=img)
+                self.video_label.config(image=img)
+                self.video_label.image = img  # manter referência
+            except Exception as e:
+                print("Aviso ao parar câmera:", e)
 
     def limpar_tela(self):
         """Limpa todos os widgets"""
