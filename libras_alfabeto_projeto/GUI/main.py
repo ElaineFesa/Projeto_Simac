@@ -41,6 +41,23 @@ class AplicativoLibras:
                 5: ["H", "J", "K", "X"],
                 6: ["W", "Y", "Z"]
             },
+            "Números": {
+                1: ["1", "2", "3", "4", "5"],
+                2: ["6", "7", "8", "9", "10"]
+            },
+            "Dias da Semana": {
+                1: ["SEGUNDA-FEIRA", "TERÇA-FEIRA", "QUARTA-FEIRA"],
+                2: ["QUINTA-FEIRA", "SEXTA-FEIRA", "SÁBADO", "DOMINGO"]
+            },
+            "Tempo": {
+                1: ["HORAS", "MINUTOS", "SEGUNDOS"],
+                2: ["ONTEM", "HOJE", "AMANHÃ", "AGORA"],
+                3: ["MÊS", "ANO"]
+            },
+            "Perguntas": {
+                1: ["QUANDO", "ONDE", "QUEM"],
+                2: ["O QUE", "POR QUE"]
+            },
             "Saudações": {
                 1: ["OI", "TCHAU", "TUDO BEM"],
                 2: ["POR FAVOR", "OBRIGADO", "DESCULPA"],
@@ -76,10 +93,12 @@ class AplicativoLibras:
                 3: ["RÁPIDO", "DEVAGAR", "QUENTE", "FRIO"]
             }
         }
-        
+
         self.icones_secoes = {
-            "Alfabeto": "🔤", "Saudações": "👋", "Família": "👨‍👩‍👧‍👦",
-            "Alimentos": "🍎", "Cores": "🎨", "Animais": "🐶", "Adjetivos": "📝"
+            "Alfabeto": "🔤", "Números": "🔢", "Dias da Semana": "📅",
+            "Tempo": "⏰", "Perguntas": "❓", "Saudações": "👋",
+            "Família": "👨‍👩‍👧‍👦", "Alimentos": "🍎", "Cores": "🎨",
+            "Animais": "🐶", "Adjetivos": "📝"
         }
         
         for secao in self.secoes:
