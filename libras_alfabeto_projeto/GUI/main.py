@@ -51,7 +51,7 @@ class AplicativoLibras:
             },
             "Tempo": {
                 1: ["HORAS", "MINUTOS", "SEGUNDOS"],
-                2: ["ONTEM", "HOJE", "AMANHÃ", "AGORA"],
+                2: ["ONTEM", "HOJE", "AMANHã", "AGORA"],
                 3: ["MÊS", "ANO"]
             },
             "Perguntas": {
@@ -253,17 +253,7 @@ class AplicativoLibras:
                        bordercolor=self.COR_BORDA,
                        lightcolor=self.COR_PRIMARIA,
                        darkcolor=self.COR_PRIMARIA)
-    # Adicione este método na classe
-    def configurar_estilo_botoes_redondos(self):
-        style = ttk.Style()
-        style.configure("Round.TButton", 
-                    background=self.COR_PRIMARIA,
-                    foreground=self.COR_TEXTO_CLARO,
-                    borderwidth=0,
-                    focusthickness=3,
-                    focuscolor=self.COR_PRIMARIA)
-        style.map("Round.TButton", 
-                background=[('active', self.COR_SECUNDARIA)])
+
     def criar_cabecalho_secoes(self, parent):
         """Cria o cabeçalho da tela de seções"""
         header_frame = tk.Frame(parent, bg=self.COR_FUNDO)
@@ -278,19 +268,16 @@ class AplicativoLibras:
                                     bg=self.COR_FUNDO, highlightthickness=0)
         btn_sobre_canvas.pack(side=tk.LEFT, padx=10)
 
-        # Desenhar círculo roxo
-        circulo = btn_sobre_canvas.create_oval(2, 2, 38, 38, 
-                                            fill=self.COR_PRIMARIA, outline="")
-
-        # Adicionar texto "ⓘ" no centro
-        btn_sobre_canvas.create_text(20, 20, text="ⓘ", 
-                                font=("Helvetica", 16, "bold"),
-                                fill=self.COR_TEXTO_CLARO)
+        # Adicionar texto "💡" no centro (emoji de lâmpada)
+        btn_sobre_canvas.create_text(20, 20, text="💡", 
+                                font=("Segoe UI Emoji", 16),
+                                fill=self.COR_TEXTO_ESCURO)
 
         # Tornar o canvas clicável
         btn_sobre_canvas.bind("<Button-1>", lambda e: self.mostrar_sobre())
         btn_sobre_canvas.bind("<Enter>", lambda e: btn_sobre_canvas.itemconfig(circulo, fill=self.COR_SECUNDARIA))
         btn_sobre_canvas.bind("<Leave>", lambda e: btn_sobre_canvas.itemconfig(circulo, fill=self.COR_PRIMARIA))
+        
         # Informações à direita
         info_frame = tk.Frame(header_frame, bg=self.COR_FUNDO)
         info_frame.pack(side=tk.RIGHT, padx=10)
@@ -333,16 +320,21 @@ class AplicativoLibras:
     def mostrar_sobre(self):
         """Exibe informações sobre o projeto"""
         sobre_texto = (
-            "📘 Sobre o Projeto\n\n"
-            "O aplicativo **LIA** (Libras com Inteligência Artificial) foi desenvolvido para "
-            "auxiliar no aprendizado da Língua Brasileira de Sinais (Libras), "
-            "utilizando visão computacional e redes neurais.\n\n"
-            "🔹 Reconhecimento de gestos em tempo real com MediaPipe + TensorFlow.\n"
-            "🔹 Estrutura de níveis e seções temáticas para facilitar a aprendizagem.\n"
-            "🔹 Interface amigável e interativa para prática dos sinais.\n\n"
-            "Este projeto busca unir tecnologia e inclusão, promovendo o acesso à comunicação."
+            "LIA - Libras Inteligência Artificial\n\n"
+            "O LIA é um aplicativo inovador projetado para facilitar o aprendizado da Língua Brasileira de Sinais (Libras) "
+            "por meio de tecnologia de reconhecimento de gestos com inteligência artificial.\n\n"
+            "🔹 Funcionalidades:\n"
+            "• Reconhecimento de gestos em tempo real\n"
+            "• Aprendizado por níveis e seções temáticas\n"
+            "• Interface intuitiva e amigável\n\n"
+            "🔹 Tecnologias utilizadas:\n"
+            "• MediaPipe para detecção de mãos\n"
+            "• Redes neurais con TensorFlow/Keras\n"
+            "• Interface gráfica com Tkinter\n\n"
+            "Este projeto visa promover a inclusão e acessibilidade, tornando o aprendizado de Libras "
+            "acessível a todos."
         )
-        messagebox.showinfo("Sobre", sobre_texto)
+        messagebox.showinfo("Sobre o LIA", sobre_texto)
         
     def criar_card(self, parent, secao):
         """Cria um card estilizado para cada seção"""
@@ -640,7 +632,7 @@ class AplicativoLibras:
         tk.Label(frame, text="Gesto Alvo", font=("Helvetica", 14, "bold"),
                 bg=self.COR_CARD, fg=self.COR_PRIMARIA, pady=10).grid(row=0, column=0, sticky="ew")
         
-        # Container para a letra e imagem
+        # Container para a letra and imagem
         content_frame = tk.Frame(frame, bg=self.COR_CARD)
         content_frame.grid(row=1, column=0, sticky="nsew", padx=20, pady=20)
         content_frame.columnconfigure(0, weight=1)
