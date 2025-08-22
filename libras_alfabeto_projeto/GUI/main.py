@@ -104,6 +104,9 @@ class AplicativoLibras:
         for secao in self.secoes:
             self.niveis_completos[secao] = []
         
+        # Inicializa seções liberadas
+        self.secoes_liberadas = ["Alfabeto"]
+        
         self.mostrar_tela_inicial()
 
     def configurar_cores(self):
@@ -412,8 +415,8 @@ class AplicativoLibras:
         parabens_frame.place(relx=0.5, rely=0.5, anchor="center")
         
         tk.Button(self.root, text="✕", font=("Helvetica", 16),
-                 bg=self.COR_FUNDO, fg=self.COR_ERRO, bd=0,
-                 command=self.mostrar_tela_secoes).place(relx=0.95, rely=0.05, anchor="ne")
+                bg=self.COR_FUNDO, fg=self.COR_ERRO, bd=0,
+                command=self.mostrar_tela_secoes).place(relx=0.95, rely=0.05, anchor="ne")
         
         tk.Label(parabens_frame, text="🎉 Parabéns! 🎉", font=("Helvetica", 24, "bold"),
                 bg=self.COR_FUNDO, fg=self.COR_PRIMARIA).pack(pady=20)
@@ -439,15 +442,32 @@ class AplicativoLibras:
         botoes_frame = tk.Frame(parabens_frame, bg=self.COR_FUNDO)
         botoes_frame.pack(pady=30)
         
-        if self.nivel_atual < len(self.secoes[self.secao_atual]):
+        # Verifica se é o nível FINAL da seção atual
+        niveis_na_secao = len(self.secoes[self.secao_atual])
+        eh_nivel_final = (self.nivel_atual == niveis_na_secao)
+        
+        # Só mostra "Próxima Seção" se for o nível final
+        if eh_nivel_final:
+            # Verifica se há próxima seção
+            secoes = list(self.secoes.keys())
+            index_atual = secoes.index(self.secao_atual)
+            if index_atual < len(secoes) - 1:
+                proxima_secao = secoes[index_atual + 1]
+                tk.Button(botoes_frame, text=f"Próxima Seção ({proxima_secao})",
+                        font=("Helvetica", 14, "bold"), bg=self.COR_PRIMARIA,
+                        fg=self.COR_TEXTO_CLARO, padx=20, pady=10,
+                        command=lambda: self.iniciar_nivel(proxima_secao, 1)).pack(side=tk.LEFT, padx=10)
+
+        # Botão para próximo nível (só aparece se não for o nível final)
+        if self.nivel_atual < niveis_na_secao:
             tk.Button(botoes_frame, text=f"Próximo Nível ({self.nivel_atual + 1})",
-                     font=("Helvetica", 14, "bold"), bg=self.COR_PRIMARIA,
-                     fg=self.COR_TEXTO_CLARO, padx=20, pady=10,
-                     command=self.ir_para_proximo_nivel).pack(side=tk.LEFT, padx=10)
+                    font=("Helvetica", 14, "bold"), bg=self.COR_PRIMARIA,
+                    fg=self.COR_TEXTO_CLARO, padx=20, pady=10,
+                    command=self.ir_para_proximo_nivel).pack(side=tk.LEFT, padx=10)
         
         tk.Button(botoes_frame, text="Voltar às Seções", font=("Helvetica", 14),
-                 bg=self.COR_SECUNDARIA, fg=self.COR_TEXTO_ESCURO, padx=20, pady=10,
-                 command=self.mostrar_tela_secoes).pack(side=tk.LEFT, padx=10)
+                bg=self.COR_SECUNDARIA, fg=self.COR_TEXTO_ESCURO, padx=20, pady=10,
+                command=self.mostrar_tela_secoes).pack(side=tk.LEFT, padx=10)
 
     def ir_para_proximo_nivel(self):
         """Avança para o próximo nível"""
@@ -461,7 +481,7 @@ class AplicativoLibras:
         self.root.after(100, lambda: self.carregar_nivel_background(secao, nivel, 0))
 
     def carregar_nivel_background(self, secao, nivel, progresso):
-        """Atualiza o progresso em background com estágios específicos"""
+        """Atualiza o progresso em background con estágios específicos"""
         if progresso <= 33:
             self.loading_stage.config(text="Inicializando câmera...")
             if progresso == 10:
@@ -580,7 +600,7 @@ class AplicativoLibras:
         self.atualizar_tempo()
 
     def criar_barra_superior(self, parent):
-        """Cria a barra superior do nível"""
+        """Cria la barra superior do nível"""
         top_frame = tk.Frame(parent, bg=self.COR_PRIMARIA)
         top_frame.grid(row=0, column=0, sticky="ew", padx=0, pady=0, ipady=10)
         
@@ -744,12 +764,19 @@ class AplicativoLibras:
             if self.nivel_atual not in self.niveis_completos[self.secao_atual]:
                 self.niveis_completos[self.secao_atual].append(self.nivel_atual)
             
+            # CORREÇÃO: Lógica de desbloqueio de seções
             if self.nivel_atual == len(self.secoes[self.secao_atual]):
+                # Completa a seção atual
+                if self.secao_atual not in self.secoes_liberadas:
+                    self.secoes_liberadas.append(self.secao_atual)
+                
+                # Desbloqueia a próxima seção se existir
                 secoes = list(self.secoes.keys())
                 index_atual = secoes.index(self.secao_atual)
-                if index_atual < len(secoes) - 1 and self.secao_atual not in self.secoes_liberadas:
+                if index_atual < len(secoes) - 1:
                     proxima_secao = secoes[index_atual + 1]
-                    self.secoes_liberadas.append(proxima_secao)
+                    if proxima_secao not in self.secoes_liberadas:
+                        self.secoes_liberadas.append(proxima_secao)
             
             self.mostrar_tela_parabens()
 
@@ -763,7 +790,7 @@ class AplicativoLibras:
         caminho_imagem = f"libras_alfabeto_projeto/imagens/{letra}.png"  # Ajuste o caminho conforme necessário
         
         try:
-            # Carrega a imagem e redimensiona
+            # Carrega la imagem e redimensiona
             img = Image.open(caminho_imagem)
             img = img.resize((200, 200), Image.LANCZOS)  # Tamanho ajustável
             img = ImageTk.PhotoImage(img)
@@ -794,7 +821,7 @@ class AplicativoLibras:
 
     # Métodos de câmera e reconhecimento
     def iniciar_camera(self):
-        """Inicia a câmera com configurações otimizadas"""
+        """Inicia a câmera con configurações otimizadas"""
         if self.running:
             return
             
@@ -810,7 +837,7 @@ class AplicativoLibras:
                 messagebox.showerror("Erro", "Timeout ao acessar a câmera")
                 return
             
-            # Configurações com tamanho fixo que corresponde ao display
+            # Configurações con tamanho fixo que corresponde ao display
             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)  # Resolução fixa
             self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
             self.cap.set(cv2.CAP_PROP_FPS, 20)  # FPS reduzido para melhor performance
@@ -831,7 +858,7 @@ class AplicativoLibras:
             self.cap = None
 
     def atualizar_frame(self):
-        """Atualiza o frame da câmera com tratamento de erros"""
+        """Atualiza o frame da câmera con tratamento de erros"""
         if not self.running:
             return
             
@@ -905,7 +932,7 @@ class AplicativoLibras:
             confianca = preds[classe_idx]
             gesto_reconhecido = self.le_gestos.classes_[classe_idx]
 
-            # 🔹 Normaliza para ignorar mão esquerda/direitaxeu 
+            # 🔹 Normaliza para ignorar mão esquerda/direita
             gesto_normalizado = gesto_reconhecido.replace("_DIR", "").replace("_ESQ", "")
             alvo_normalizado = self.gesto_alvo.replace("_DIR", "").replace("_ESQ", "")
 
@@ -955,7 +982,7 @@ class AplicativoLibras:
         return np.array(landmarks).flatten()
 
     def mostrar_frame(self, frame):
-        """Mostra o frame na interface com tamanho fixo"""
+        """Mostra o frame na interface con tamanho fixo"""
         img = Image.fromarray(frame)
         
         # Tamanho fixo para a imagem (pode ajustar conforme necessário)
