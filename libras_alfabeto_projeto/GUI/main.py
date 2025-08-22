@@ -55,13 +55,12 @@ class AplicativoLibras:
                 3: ["MES", "ANO"]
             },
             "Perguntas": {
-                1: ["QUANDO", "ONDE", "QUEM"],
+                1: ["QUANDO", "ONDE"],
                 2: ["O QUE", "POR QUE"]
             },
             "Saudações": {
                 1: ["OI", "TCHAU", "TUDO BEM"],
-                2: ["POR FAVOR", "OBRIGADO", "DESCULPA"],
-                3: ["BOM DIA", "BOA TARDE", "BOA NOITE"]
+                2: ["POR FAVOR", "OBRIGADO", "DESCULPA"]
             },
             "Família": {
                 1: ["PAI", "MÃE", "IRMÃO", "IRMÃ"],
