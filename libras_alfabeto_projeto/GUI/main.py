@@ -41,6 +41,23 @@ class AplicativoLibras:
                 5: ["H", "J", "K", "X"],
                 6: ["W", "Y", "Z"]
             },
+            "Números": {
+                1: ["1", "2", "3", "4", "5"],
+                2: ["6", "7", "8", "9", "10"]
+            },
+            "Dias da Semana": {
+                1: ["SEGUNDA-FEIRA", "TERÇA-FEIRA", "QUARTA-FEIRA"],
+                2: ["QUINTA-FEIRA", "SEXTA-FEIRA", "SÁBADO", "DOMINGO"]
+            },
+            "Tempo": {
+                1: ["HORAS", "MINUTOS", "SEGUNDOS"],
+                2: ["ONTEM", "HOJE", "AMANHã", "AGORA"],
+                3: ["MÊS", "ANO"]
+            },
+            "Perguntas": {
+                1: ["QUANDO", "ONDE", "QUEM"],
+                2: ["O QUE", "POR QUE"]
+            },
             "Saudações": {
                 1: ["OI", "TCHAU", "TUDO BEM"],
                 2: ["POR FAVOR", "OBRIGADO", "DESCULPA"],
@@ -76,10 +93,12 @@ class AplicativoLibras:
                 3: ["RÁPIDO", "DEVAGAR", "QUENTE", "FRIO"]
             }
         }
-        
+
         self.icones_secoes = {
-            "Alfabeto": "🔤", "Saudações": "👋", "Família": "👨‍👩‍👧‍👦",
-            "Alimentos": "🍎", "Cores": "🎨", "Animais": "🐶", "Adjetivos": "📝"
+            "Alfabeto": "🔤", "Números": "🔢", "Dias da Semana": "📅",
+            "Tempo": "⏰", "Perguntas": "❓", "Saudações": "👋",
+            "Família": "👨‍👩‍👧‍👦", "Alimentos": "🍎", "Cores": "🎨",
+            "Animais": "🐶", "Adjetivos": "📝"
         }
         
         for secao in self.secoes:
@@ -244,6 +263,21 @@ class AplicativoLibras:
         tk.Label(header_frame, text="Seções", font=("Helvetica", 26, "bold"),
                 bg=self.COR_FUNDO, fg=self.COR_PRIMARIA).pack(side=tk.LEFT)
         
+        # Botão Sobre redondo
+        btn_sobre_canvas = tk.Canvas(header_frame, width=40, height=40, 
+                                    bg=self.COR_FUNDO, highlightthickness=0)
+        btn_sobre_canvas.pack(side=tk.LEFT, padx=10)
+
+        # Adicionar texto "💡" no centro (emoji de lâmpada)
+        btn_sobre_canvas.create_text(20, 20, text="💡", 
+                                font=("Segoe UI Emoji", 16),
+                                fill=self.COR_TEXTO_ESCURO)
+
+        # Tornar o canvas clicável
+        btn_sobre_canvas.bind("<Button-1>", lambda e: self.mostrar_sobre())
+        btn_sobre_canvas.bind("<Enter>", lambda e: btn_sobre_canvas.itemconfig(circulo, fill=self.COR_SECUNDARIA))
+        btn_sobre_canvas.bind("<Leave>", lambda e: btn_sobre_canvas.itemconfig(circulo, fill=self.COR_PRIMARIA))
+        
         # Informações à direita
         info_frame = tk.Frame(header_frame, bg=self.COR_FUNDO)
         info_frame.pack(side=tk.RIGHT, padx=10)
@@ -277,11 +311,31 @@ class AplicativoLibras:
         """Cria o rodapé da tela de seções"""
         footer_frame = tk.Frame(parent, bg=self.COR_FUNDO)
         footer_frame.pack(fill=tk.X, pady=(10, 0))
+
         
         tk.Button(footer_frame, text="Sair", font=("Helvetica", 14),
                  bg=self.COR_ERRO, fg=self.COR_TEXTO_CLARO, padx=20, pady=5,
                  command=self.sair).pack(side=tk.RIGHT, padx=10)
-
+        
+    def mostrar_sobre(self):
+        """Exibe informações sobre o projeto"""
+        sobre_texto = (
+            "LIA - Libras Inteligência Artificial\n\n"
+            "O LIA é um aplicativo inovador projetado para facilitar o aprendizado da Língua Brasileira de Sinais (Libras) "
+            "por meio de tecnologia de reconhecimento de gestos com inteligência artificial.\n\n"
+            "🔹 Funcionalidades:\n"
+            "• Reconhecimento de gestos em tempo real\n"
+            "• Aprendizado por níveis e seções temáticas\n"
+            "• Interface intuitiva e amigável\n\n"
+            "🔹 Tecnologias utilizadas:\n"
+            "• MediaPipe para detecção de mãos\n"
+            "• Redes neurais con TensorFlow/Keras\n"
+            "• Interface gráfica com Tkinter\n\n"
+            "Este projeto visa promover a inclusão e acessibilidade, tornando o aprendizado de Libras "
+            "acessível a todos."
+        )
+        messagebox.showinfo("Sobre o LIA", sobre_texto)
+        
     def criar_card(self, parent, secao):
         """Cria um card estilizado para cada seção"""
         secao_liberada = secao in self.secoes_liberadas
@@ -578,7 +632,7 @@ class AplicativoLibras:
         tk.Label(frame, text="Gesto Alvo", font=("Helvetica", 14, "bold"),
                 bg=self.COR_CARD, fg=self.COR_PRIMARIA, pady=10).grid(row=0, column=0, sticky="ew")
         
-        # Container para a letra e imagem
+        # Container para a letra and imagem
         content_frame = tk.Frame(frame, bg=self.COR_CARD)
         content_frame.grid(row=1, column=0, sticky="nsew", padx=20, pady=20)
         content_frame.columnconfigure(0, weight=1)
@@ -920,6 +974,16 @@ class AplicativoLibras:
         if self.cap:
             self.cap.release()
         self.cap = None
+        # Se o widget ainda existir, mostra tela preta
+        if hasattr(self, "video_label") and self.video_label.winfo_exists():
+            try:
+                img = np.zeros((480, 640, 3), dtype=np.uint8)  # imagem preta
+                img = Image.fromarray(img)
+                img = ImageTk.PhotoImage(image=img)
+                self.video_label.config(image=img)
+                self.video_label.image = img  # manter referência
+            except Exception as e:
+                print("Aviso ao parar câmera:", e)
 
     def limpar_tela(self):
         """Limpa todos os widgets"""

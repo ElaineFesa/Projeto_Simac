@@ -1,94 +1,94 @@
-# Projeto_Simac
-# 🤟 Reconhecimento de Letras em Libras com Python
+📘 LIA - Libras com Inteligência Artificial
 
-Este projeto utiliza visão computacional e aprendizado de máquina para **reconhecer letras do alfabeto em Libras (Língua Brasileira de Sinais)**, utilizando **MediaPipe** para rastreamento de mão e **Random Forest** para classificação dos sinais.
+O LIA é um aplicativo interativo que ensina Língua Brasileira de Sinais (Libras) utilizando reconhecimento de gestos em tempo real.
+Ele combina MediaPipe, OpenCV, TensorFlow e Tkinter para capturar gestos com a câmera, reconhecer sinais e gamificar o aprendizado em níveis e seções temáticas.
 
-> Ideal para fins educacionais, demonstrações de IA e inclusão digital.
+🚀 Funcionalidades
 
----
+🎮 Aplicativo interativo em interface gráfica (Tkinter).
 
-## 📸 Demonstração
+✋ Reconhecimento de gestos usando MediaPipe + LSTM.
 
-O sistema é dividido em três etapas principais:
+📷 Captura de gestos com a câmera.
 
-1. **Coleta de Dados** (`coletar_letras.py`)  
-   Captura os gestos da mão e associa à letra pressionada no teclado, gerando um dataset.
+📝 Coleta de novos gestos e armazenamento em CSV.
 
-2. **Treinamento do Modelo** (`treinar_modelo.py`)  
-   Treina um classificador Random Forest com os dados coletados e salva o modelo.
+🤖 Treinamento de modelos de reconhecimento personalizados.
 
-3. **Reconhecimento em Tempo Real** (`reconhecer_letras.py`)  
-   Usa o modelo treinado para prever, em tempo real, qual letra está sendo mostrada com a mão.
+📊 Feedback em tempo real com confiança e suavização de predições.
 
----
 
-## 📂 Estrutura dos Arquivos
+⚙️ Instalação
 
-```
-📁 dados/
-  └── letras_libras.csv         # Arquivo CSV com os dados coletados
-coletar_letras.py              # Script para coletar os dados
-treinar_modelo.py              # Script para treinar o modelo
-reconhecer_letras.py           # Script para reconhecer as letras em tempo real
-modelo_letras_libras.pkl       # (Gerado após o treinamento)
-```
-## 🚀 Como Executar
+Clone este repositório:
 
-### Pré-requisitos
+git clone https://github.com/ElaineFesa/Projeto_Simac.git
 
-Instale os pacotes necessários:
+Instale as dependências:
 
-```bash
-pip install opencv-python mediapipe scikit-learn pandas joblib
-```
+Python 3.11
 
-### 1. Coletar dados com webcam
+TensorFlow 2.19.0
 
-```bash
-python coletar_letras.py
-```
+MediaPipe 0.10.21
 
-- Mostre uma letra em Libras com a mão para a câmera.
-- Pressione a tecla correspondente no teclado (ex: `A`, `B`, `C`...).
-- Repita para várias letras e exemplos.
-- Pressione `ESC` para sair.
+OpenCV
 
-### 2. Treinar o modelo
+Tkinter (incluso no Python)
 
-```bash
-python treinar_modelo.py
-```
+NumPy, Pandas, Scikit-learn, Joblib
 
-- O modelo será treinado e salvo como `modelo_letras_libras.pkl`.
+▶️ Como Usar
+1. Coletar novos gestos
 
-### 3. Reconhecer letras em tempo real
+Execute:
 
-```bash
-python reconhecer_letras.py
-```
+python coletar_gestos.py
 
-- A webcam será ativada e o sistema exibirá a letra reconhecida na tela.
-- Pressione `ESC` para sair.
 
-## 🎯 Resultados Esperados
+Digite o nome do gesto.
 
-- A acurácia será exibida após o treinamento.
-- Durante o reconhecimento, a letra detectada será mostrada em tempo real sobre o vídeo.
+Mostre o gesto para a câmera.
 
-## 🛠️ Tecnologias Utilizadas
+Pressione Espaço para gravar (mínimo 10 frames).
 
-- [OpenCV](https://opencv.org/)
-- [MediaPipe Hands](https://google.github.io/mediapipe/)
-- [Scikit-Learn](https://scikit-learn.org/)
-- [Python 3](https://www.python.org/)
+Pressione ESC para cancelar.
 
-## 📌 Observações
+Os dados serão salvos em dados/gestos_libras.csv.
 
-- O modelo depende da qualidade dos dados coletados.
-- É recomendado coletar múltiplas amostras de cada letra e variar ângulos e posições.
-- Atualmente, o sistema reconhece **apenas uma mão por vez**.
+2. Treinar o modelo
+python treinar_modelo_gestos.py
 
-👨‍💻 Este projeto foi desenvolvido por:
-- Elaíne Gomes
-- Joyce Peres
 
+Treina um modelo LSTM baseado nos gestos coletados.
+
+Gera os arquivos:
+
+modelos/modelo_gestos.h5 (rede neural treinada).
+
+modelos/rotulador_gestos.pkl (rótulos dos gestos).
+
+3. Testar reconhecimento
+python reconhecer_gestos.py
+
+
+Inicia a captura da câmera.
+
+Exibe os gestos reconhecidos em tempo real.
+
+4. Rodar o aplicativo
+python main.py
+
+
+Interface gráfica abre em tela cheia.
+
+Escolha a seção.
+
+Complete os níveis mostrando os gestos corretos para a câmera.
+
+Avance desbloqueando novas seções.
+
+👩‍💻 Autoria
+
+Desenvolvido por Elaíne Gomes e Joyce da Costa, 2025.
+Projeto acadêmico para o SIMAC.
