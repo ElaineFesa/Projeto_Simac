@@ -50,8 +50,8 @@ class AplicativoLibras:
                 2: ["QUINTA-FEIRA", "SEXTA-FEIRA", "SÁBADO", "DOMINGO"]
             },
             "Tempo": {
-                1: ["HORAS", "MINUTOS", "SEGUNDOS"],
-                2: ["ONTEM", "HOJE", "AMANHã", "AGORA"],
+                1: ["HORAS", "MINUTOS"],
+                2: ["ONTEM", "HOJE", "AMANHÃ", "AGORA"],
                 3: ["MÊS", "ANO"]
             },
             "Perguntas": {
@@ -465,7 +465,7 @@ class AplicativoLibras:
                     fg=self.COR_TEXTO_CLARO, padx=20, pady=10,
                     command=self.ir_para_proximo_nivel).pack(side=tk.LEFT, padx=10)
         
-        tk.Button(botoes_frame, text="Voltar às Seções", font=("Helvetica", 14),
+        tk.Button(botoes_frame, text="Vo ltar às Seções", font=("Helvetica", 14),
                 bg=self.COR_SECUNDARIA, fg=self.COR_TEXTO_ESCURO, padx=20, pady=10,
                 command=self.mostrar_tela_secoes).pack(side=tk.LEFT, padx=10)
 
