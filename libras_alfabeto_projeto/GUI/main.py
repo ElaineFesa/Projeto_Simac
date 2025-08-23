@@ -47,12 +47,12 @@ class AplicativoLibras:
             },
             "Dias da Semana": {
                 1: ["SEGUNDA-FEIRA", "TERÇA-FEIRA", "QUARTA-FEIRA"],
-                2: ["QUINTA-FEIRA", "SEXTA-FEIRA", "SÁBADO", "DOMINGO"]
+                2: ["QUINTA-FEIRA", "SEXTA-FEIRA", "SABADO", "DOMINGO"]
             },
             "Tempo": {
                 1: ["HORAS", "MINUTOS"],
-                2: ["ONTEM", "HOJE", "AMANHÃ", "AGORA"],
-                3: ["MÊS", "ANO"]
+                2: ["ONTEM","AMANHA", "AGORA"],
+                3: ["MES", "ANO"]
             },
             "Perguntas": {
                 1: ["QUANDO", "ONDE", "QUEM"],
